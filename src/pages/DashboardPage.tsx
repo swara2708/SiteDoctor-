@@ -32,6 +32,8 @@ import {
   List,
   Gauge,
   Smartphone,
+  Trophy,
+  Check,
 } from 'lucide-react'
 
 interface ImageFlag {
@@ -149,6 +151,9 @@ export default function DashboardPage() {
   const [actionLoading, setActionLoading] = useState(false)
   const [emailNotifications, setEmailNotifications] = useState(true)
 
+  // Addressed suggestions tracking mapped per scanId
+  const [addressedSuggestions, setAddressedSuggestions] = useState<Record<string, string[]>>({})
+
   // Form Inline Validation Errors
   const [addUrlError, setAddUrlError] = useState('')
   const [editNicknameError, setEditNicknameError] = useState('')
@@ -171,6 +176,16 @@ export default function DashboardPage() {
     } catch (err) {
       console.warn('Could not read user profile settings:', err)
     }
+  }
+
+  const toggleSuggestion = (scanId: string, suggestionId: string) => {
+    setAddressedSuggestions((prev) => {
+      const currentList = prev[scanId] || []
+      const newList = currentList.includes(suggestionId)
+        ? currentList.filter((id) => id !== suggestionId)
+        : [...currentList, suggestionId]
+      return { ...prev, [scanId]: newList }
+    })
   }
 
   const fetchSites = async () => {
@@ -490,6 +505,89 @@ export default function DashboardPage() {
                 const scanError = scanErrors[site.id]
                 const imgStats = latestScan ? getImageFlagsStats(latestScan) : { total: 0, flagged: 0 }
 
+                const suggestions = latestScan ? (() => {
+                  const list: Array<{ id: string; type: 'SEO' | 'Trust' | 'Image'; title: string; fix: string; priority: 'High' | 'Medium' | 'Low' }> = []
+                  
+                  // 1. SEO report suggestions
+                  const seoCategories = latestScan.seo_report?.categories || []
+                  seoCategories.forEach((cat: any) => {
+                    if (cat.status === 'Needs Improvement' || cat.status === 'Critical') {
+                      list.push({
+                        id: `seo-${cat.category_name}`,
+                        type: 'SEO',
+                        title: `${cat.category_name}: ${cat.explanation}`,
+                        fix: cat.fix_suggestion,
+                        priority: cat.priority || 'Medium'
+                      })
+                    }
+                  })
+
+                  // 2. Trust report suggestions
+                  const trustFlags = latestScan.trust_report?.flags || []
+                  trustFlags.forEach((flg: any, idx: number) => {
+                    list.push({
+                      id: `trust-${idx}-${flg.flag.replace(/\s+/g, '-').toLowerCase()}`,
+                      type: 'Trust',
+                      title: flg.flag,
+                      fix: flg.explanation ? `Recommendation: ${flg.explanation}` : 'Improve site trust indicator.',
+                      priority: flg.priority || 'Medium'
+                    })
+                  })
+
+                  // 3. Image suggestions
+                  const imageFlags = latestScan.image_flags || []
+                  imageFlags.forEach((img: any, idx: number) => {
+                    const imgUrl = img.image_url || ''
+                    const displayUrl = imgUrl.length > 45 ? imgUrl.substring(0, 45) + '...' : imgUrl
+                    if (img.quality_flag === 'broken') {
+                      list.push({
+                        id: `img-broken-${idx}`,
+                        type: 'Image',
+                        title: `Image failed to load: ${displayUrl}`,
+                        fix: 'This image failed to load. Replace it with a valid asset.',
+                        priority: 'High'
+                      })
+                    }
+                    if (img.looks_like_stock_photo) {
+                      list.push({
+                        id: `img-stock-${idx}`,
+                        type: 'Image',
+                        title: `Stock photo detected: ${displayUrl}`,
+                        fix: 'Replace this image with authentic, custom photography to build trust.',
+                        priority: 'Medium'
+                      })
+                    }
+                    if (img.quality_flag === 'low-resolution') {
+                      list.push({
+                        id: `img-low-res-${idx}`,
+                        type: 'Image',
+                        title: `Low resolution image: ${displayUrl}`,
+                        fix: 'Replace this image with a higher resolution version.',
+                        priority: 'Medium'
+                      })
+                    }
+                    if (img.quality_flag === 'placeholder') {
+                      list.push({
+                        id: `img-placeholder-${idx}`,
+                        type: 'Image',
+                        title: `Placeholder image: ${displayUrl}`,
+                        fix: 'Replace this placeholder with actual, custom content.',
+                        priority: 'Medium'
+                      })
+                    }
+                  })
+
+                  // Sort priority: High -> Medium -> Low
+                  const priorityWeight = { High: 3, Medium: 2, Low: 1 }
+                  return list.sort((a, b) => {
+                    const weightA = priorityWeight[a.priority] || 2
+                    const weightB = priorityWeight[b.priority] || 2
+                    return weightB - weightA
+                  })
+                })() : []
+
+                const addressedList = latestScan ? (addressedSuggestions[latestScan.id] || []) : []
+
                 return (
                   <Card key={site.id} className="bg-slate-900/50 border-slate-800 text-slate-100 hover:border-slate-700/80 transition-all flex flex-col justify-between">
                     <CardHeader className="pb-4">
@@ -533,6 +631,97 @@ export default function DashboardPage() {
                           <ProgressRing value={latestScan.seo_score || 0} label="SEO" type="seo" />
                           <ProgressRing value={latestScan.trust_score || 0} label="Trust" type="trust" />
                           <ProgressRing value={latestScan.combined_score || 0} label="Index" type="combined" />
+                        </div>
+                      )}
+
+                      {/* Display Suggestions to Improve Your Website */}
+                      {latestScan && !isScanning && (
+                        <div className="mt-4 pt-4 border-t border-slate-800/40">
+                          <h4 className="text-xs font-bold text-slate-400 flex items-center justify-between mb-2 px-1">
+                            <span className="flex items-center gap-1.5 font-bold">
+                              <AlertCircle className="h-3.5 w-3.5 text-amber-500" />
+                              Suggestions to Improve
+                            </span>
+                            {suggestions.length > 0 && (
+                              <span className="text-[10px] bg-slate-800 text-slate-400 px-2 py-0.5 rounded font-mono">
+                                {addressedList.filter(id => suggestions.some(s => s.id === id)).length} of {suggestions.length} addressed
+                              </span>
+                            )}
+                          </h4>
+
+                          {suggestions.length > 0 && (
+                            <div className="w-full bg-slate-850 h-1.5 rounded-full mb-3 overflow-hidden">
+                              <div 
+                                className="bg-gradient-to-r from-amber-500 to-emerald-500 h-full transition-all duration-500" 
+                                style={{ 
+                                  width: `${(addressedList.filter(id => suggestions.some(s => s.id === id)).length / suggestions.length) * 100}%` 
+                                }}
+                              />
+                            </div>
+                          )}
+
+                          {suggestions.length === 0 ? (
+                            <div className="bg-emerald-500/5 border border-emerald-500/20 rounded-xl p-3 flex items-start gap-2.5">
+                              <Trophy className="h-4 w-4 text-emerald-400 shrink-0 mt-0.5 animate-pulse" />
+                              <div className="text-[11px] text-emerald-400/90 leading-normal">
+                                <span className="font-bold block text-emerald-400 mb-0.5">Great job! No major issues found.</span>
+                                Your site meets excellent SEO and Trust standards.
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="space-y-2 max-h-[300px] overflow-y-auto pr-1">
+                              {suggestions.map((s) => {
+                                const isAddressed = addressedList.includes(s.id)
+                                
+                                const getPriorityStyles = (p: string) => {
+                                  if (p === 'High') return 'bg-red-500/10 text-red-400 border-red-500/20'
+                                  if (p === 'Medium') return 'bg-amber-500/10 text-amber-400 border-amber-500/20'
+                                  return 'bg-slate-800 text-slate-400 border-slate-700/50'
+                                }
+
+                                return (
+                                  <div 
+                                    key={s.id}
+                                    className={`bg-slate-950/30 border rounded-lg p-2.5 flex gap-2.5 transition-all duration-300 ${
+                                      isAddressed 
+                                        ? 'border-slate-800/40 opacity-55 line-through decoration-slate-600' 
+                                        : 'border-slate-850 hover:border-slate-800'
+                                    }`}
+                                  >
+                                    <button 
+                                      onClick={() => toggleSuggestion(latestScan.id, s.id)}
+                                      className={`h-4 w-4 rounded border flex items-center justify-center shrink-0 mt-0.5 transition-all ${
+                                        isAddressed 
+                                          ? 'bg-emerald-500 border-emerald-500 text-slate-950' 
+                                          : 'border-slate-700 hover:border-slate-500 bg-transparent'
+                                      }`}
+                                      aria-label={isAddressed ? "Mark as uncompleted" : "Mark as completed"}
+                                    >
+                                      {isAddressed && <Check className="h-3 w-3 stroke-[3]" />}
+                                    </button>
+
+                                    <div className="flex-1 space-y-1 min-w-0">
+                                      <div className="flex items-center gap-1.5 flex-wrap">
+                                        <span className={`text-[8px] uppercase tracking-wider font-extrabold px-1.5 py-0.2 rounded border ${getPriorityStyles(s.priority)}`}>
+                                          {s.priority}
+                                        </span>
+                                        <span className="text-[9px] bg-slate-800 text-slate-400 font-semibold px-1 rounded-sm">
+                                          {s.type}
+                                        </span>
+                                      </div>
+                                      
+                                      <div className="text-[11px] font-bold text-slate-200 leading-snug">
+                                        {s.title}
+                                      </div>
+                                      <div className="text-[10px] text-slate-400 leading-normal">
+                                        {s.fix}
+                                      </div>
+                                    </div>
+                                  </div>
+                                )
+                              })}
+                            </div>
+                          )}
                         </div>
                       )}
 

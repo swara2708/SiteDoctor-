@@ -205,7 +205,12 @@ You MUST evaluate the site across exactly these 6 fixed SEO categories:
 
 Return a STRICT JSON object with the following structure. Do NOT wrap it in markdown code blocks (\`\`\`json), and do NOT add any conversational prefix or suffix. Return ONLY the JSON object.
 
-Every category MUST be included in the "seo_categories" array. If a category has no issues, mark its status as "Good", and provide an explanation like "Excellent setup, no issues detected." and a fix_suggestion like "None required.".
+Every category MUST be included in the "seo_categories" array. If a category has no issues, mark its status as "Good", provide an explanation like "Excellent setup, no issues detected.", a fix_suggestion like "None required.", and a priority of "Low".
+
+For any category with status "Needs Improvement" or "Critical", or any Trust flag, determine a priority ("High", "Medium", or "Low") based on its SEO or trust impact:
+- "High": Crucial ranking/trust factors (e.g. missing title/meta description, missing secure protocols, no contact info).
+- "Medium": Significant factors (e.g. missing alt text, slow loading elements, duplicate/thin copy).
+- "Low": Minor details (e.g. heading order nesting, unoptimized minor meta tags).
 
 {
   "seo_score": 85,
@@ -214,42 +219,52 @@ Every category MUST be included in the "seo_categories" array. If a category has
       "category_name": "Meta Tags",
       "status": "Needs Improvement",
       "explanation": "The page title exists but the description meta tag is missing.",
-      "fix_suggestion": "Add a descriptive meta description tag between 150-160 characters."
+      "fix_suggestion": "Add a descriptive meta description tag between 150-160 characters.",
+      "priority": "High"
     },
     {
       "category_name": "Headings Structure",
       "status": "Good",
       "explanation": "Headings follow a logical nested order with a single H1 tag.",
-      "fix_suggestion": "None required."
+      "fix_suggestion": "None required.",
+      "priority": "Low"
     },
     {
       "category_name": "Page Speed",
       "status": "Good",
       "explanation": "No heavy assets or large scripts are blocking initial render.",
-      "fix_suggestion": "None required."
+      "fix_suggestion": "None required.",
+      "priority": "Low"
     },
     {
       "category_name": "Mobile-Friendliness",
       "status": "Good",
       "explanation": "Responsive meta viewport is properly defined.",
-      "fix_suggestion": "None required."
+      "fix_suggestion": "None required.",
+      "priority": "Low"
     },
     {
       "category_name": "Content Quality",
       "status": "Good",
       "explanation": "Content depth and word count are appropriate for the topic.",
-      "fix_suggestion": "None required."
+      "fix_suggestion": "None required.",
+      "priority": "Low"
     },
     {
       "category_name": "Image Alt Text",
       "status": "Good",
       "explanation": "All detected images have descriptive alt text tags.",
-      "fix_suggestion": "None required."
+      "fix_suggestion": "None required.",
+      "priority": "Low"
     }
   ],
   "trust_score": 75,
   "trust_flags": [
-    { "flag": "Title of the credibility flag", "explanation": "Why this flag was raised, e.g. lack of author bio, copy reads like generic AI text" }
+    { 
+      "flag": "Title of the credibility flag", 
+      "explanation": "Why this flag was raised, e.g. lack of author bio, copy reads like generic AI text",
+      "priority": "Medium"
+    }
   ]
 }
 `
