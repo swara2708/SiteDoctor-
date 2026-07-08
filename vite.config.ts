@@ -226,6 +226,33 @@ Every category MUST be included in the "seo_categories" array. If a category has
                 // Parse the inner JSON
                 const parsedAudit = JSON.parse(rawContent)
 
+                const prepareLocalImageBase64 = async (imgUrl: string) => {
+                  try {
+                    const urlObj = new URL(imgUrl)
+                    const isLocal = ['localhost', '127.0.0.1', '0.0.0.0'].includes(urlObj.hostname) || 
+                                    urlObj.hostname.startsWith('192.168.') || 
+                                    urlObj.hostname.startsWith('10.') || 
+                                    urlObj.hostname.startsWith('172.')
+
+                    if (isLocal) {
+                      console.log(`[SiteDoctor+ Debug] Fetching local image for base64 encoding: ${imgUrl}`)
+                      const res = await fetch(imgUrl)
+                      if (!res.ok) {
+                        throw new Error(`Failed to fetch local image. Status: ${res.status}`)
+                      }
+                      const arrayBuffer = await res.arrayBuffer()
+                      const buffer = Buffer.from(arrayBuffer)
+                      const base64 = buffer.toString('base64')
+                      const contentType = res.headers.get('content-type') || 'image/jpeg'
+                      console.log(`[SiteDoctor+ Debug] Successfully converted local image to base64 (size: ${buffer.length} bytes)`)
+                      return `data:${contentType};base64,${base64}`
+                    }
+                  } catch (err: any) {
+                    console.error(`[SiteDoctor+ Debug] Local base64 conversion failed for ${imgUrl}:`, err.message)
+                  }
+                  return imgUrl
+                }
+
                 // 4. Run Groq Vision analysis in parallel for the collected images
                 console.log(`[SiteDoctor+ Debug] Starting Vision analysis loop for:`, uniqueImages)
                 const visionPromises = uniqueImages.map(async (imageUrl) => {
@@ -261,6 +288,9 @@ Every category MUST be included in the "seo_categories" array. If a category has
                     }
                   }
 
+                  // Resolve local url to base64 to ensure Groq can read it
+                  const payloadUrl = await prepareLocalImageBase64(imageUrl)
+
                   try {
                     const payload = {
                       model: 'llama-3.2-11b-vision-preview',
@@ -276,7 +306,7 @@ Every category MUST be included in the "seo_categories" array. If a category has
                             {
                               type: 'image_url',
                               image_url: {
-                                url: imageUrl,
+                                url: payloadUrl,
                               },
                             },
                           ],
@@ -285,7 +315,7 @@ Every category MUST be included in the "seo_categories" array. If a category has
                       temperature: 0.1,
                     }
 
-                    console.log(`[SiteDoctor+ Debug] Sending Groq Vision request payload for image: ${imageUrl}\n`, JSON.stringify(payload, null, 2))
+                    console.log(`[SiteDoctor+ Debug] Sending Groq Vision request payload for image: ${imageUrl} (payloadUrl is ${payloadUrl.startsWith('data:') ? 'base64' : 'public url'})`)
 
                     const visionResponse = await fetch('https://api.groq.com/openai/v1/chat/completions', {
                       method: 'POST',
@@ -297,9 +327,20 @@ Every category MUST be included in the "seo_categories" array. If a category has
                     })
 
                     if (!visionResponse.ok) {
-                      const errorBody = await visionResponse.text()
-                      console.error(`[SiteDoctor+ Debug] Groq Vision API Error! Status: ${visionResponse.status}\nError body:\n`, errorBody)
-                      throw new Error(`Vision model failed. Status: ${visionResponse.status}`)
+                      let errMsg = `Vision model failed. Status: ${visionResponse.status}`
+                      try {
+                        const errorData = await visionResponse.json() as any
+                        if (errorData?.error?.message) {
+                          errMsg = errorData.error.message
+                        }
+                      } catch (_) {
+                        try {
+                          const text = await visionResponse.text()
+                          if (text) errMsg = text.substring(0, 150)
+                        } catch (__) {}
+                      }
+                      console.error(`[SiteDoctor+ Debug] Groq Vision API Error! Status: ${visionResponse.status}\nDetails:\n`, errMsg)
+                      throw new Error(errMsg)
                     }
 
                     const visionResultJson = (await visionResponse.json()) as any
