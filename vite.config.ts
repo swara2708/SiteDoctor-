@@ -84,6 +84,8 @@ export default defineConfig(({ mode }) => {
                   rawImages.push(match[1].trim())
                 }
 
+                console.log(`[SiteDoctor+ Debug] Extracted Raw Image URLs:`, rawImages)
+
                 // Resolve image URLs to absolute URLs & filter invalid ones
                 const resolvedImages: string[] = []
                 for (const imgUrl of rawImages) {
@@ -93,13 +95,13 @@ export default defineConfig(({ mode }) => {
                       continue
                     }
                     const absUrl = new URL(imgUrl, url).href
-                    if (absUrl.startsWith('http://') || absUrl.startsWith('https://')) {
-                      resolvedImages.push(absUrl)
-                    }
+                    resolvedImages.push(absUrl)
                   } catch (_) {
                     // Skip if invalid url resolution
                   }
                 }
+
+                console.log(`[SiteDoctor+ Debug] Resolved Absolute Image URLs:`, resolvedImages)
 
                 // Take unique images to prevent scanning duplicates
                 const uniqueImages = Array.from(new Set(resolvedImages)).slice(0, 3)
@@ -225,39 +227,78 @@ Every category MUST be included in the "seo_categories" array. If a category has
                 const parsedAudit = JSON.parse(rawContent)
 
                 // 4. Run Groq Vision analysis in parallel for the collected images
+                console.log(`[SiteDoctor+ Debug] Starting Vision analysis loop for:`, uniqueImages)
                 const visionPromises = uniqueImages.map(async (imageUrl) => {
+                  // 4a. Validate URL protocol
+                  if (!imageUrl.startsWith('http://') && !imageUrl.startsWith('https://')) {
+                    console.log(`[SiteDoctor+ Debug] Skipping image ${imageUrl}: invalid URL protocol`)
+                    return {
+                      image_url: imageUrl,
+                      looks_like_stock_photo: false,
+                      reasoning: 'skipped - invalid URL',
+                      quality_flag: 'broken',
+                      relevance_note: 'Could not load',
+                    }
+                  }
+
+                  // 4b. Validate image format/extension
+                  let pathname = ''
                   try {
+                    pathname = new URL(imageUrl).pathname.toLowerCase()
+                  } catch (_) {
+                    pathname = imageUrl.toLowerCase()
+                  }
+
+                  const hasValidExtension = ['.jpg', '.jpeg', '.png', '.webp', '.gif'].some(ext => pathname.endsWith(ext))
+                  if (!hasValidExtension) {
+                    console.log(`[SiteDoctor+ Debug] Skipping image ${imageUrl}: unsupported format`)
+                    return {
+                      image_url: imageUrl,
+                      looks_like_stock_photo: false,
+                      reasoning: 'skipped - unsupported format',
+                      quality_flag: 'broken',
+                      relevance_note: 'Could not load',
+                    }
+                  }
+
+                  try {
+                    const payload = {
+                      model: 'llama-3.2-11b-vision-preview',
+                      response_format: { type: 'json_object' },
+                      messages: [
+                        {
+                          role: 'user',
+                          content: [
+                            {
+                              type: 'text',
+                              text: 'Analyze this image and return a STRICT JSON object containing: "looks_like_stock_photo" (boolean), "reasoning" (string), "quality_flag" (string, one of: "broken", "low-resolution", "placeholder", "normal"), and "relevance_note" (string). Return ONLY the raw JSON object, without code fences or wrappers.',
+                            },
+                            {
+                              type: 'image_url',
+                              image_url: {
+                                url: imageUrl,
+                              },
+                            },
+                          ],
+                        },
+                      ],
+                      temperature: 0.1,
+                    }
+
+                    console.log(`[SiteDoctor+ Debug] Sending Groq Vision request payload for image: ${imageUrl}\n`, JSON.stringify(payload, null, 2))
+
                     const visionResponse = await fetch('https://api.groq.com/openai/v1/chat/completions', {
                       method: 'POST',
                       headers: {
                         'Content-Type': 'application/json',
                         'Authorization': `Bearer ${groqApiKey}`,
                       },
-                      body: JSON.stringify({
-                        model: 'llama-3.2-11b-vision-preview',
-                        response_format: { type: 'json_object' },
-                        messages: [
-                          {
-                            role: 'user',
-                            content: [
-                              {
-                                type: 'text',
-                                text: 'Analyze this image and return a STRICT JSON object containing: "looks_like_stock_photo" (boolean), "reasoning" (string), "quality_flag" (string, one of: "broken", "low-resolution", "placeholder", "normal"), and "relevance_note" (string). Return ONLY the raw JSON object, without code fences or wrappers.',
-                              },
-                              {
-                                type: 'image_url',
-                                image_url: {
-                                  url: imageUrl,
-                                },
-                              },
-                            ],
-                          },
-                        ],
-                        temperature: 0.1,
-                      }),
+                      body: JSON.stringify(payload),
                     })
 
                     if (!visionResponse.ok) {
+                      const errorBody = await visionResponse.text()
+                      console.error(`[SiteDoctor+ Debug] Groq Vision API Error! Status: ${visionResponse.status}\nError body:\n`, errorBody)
                       throw new Error(`Vision model failed. Status: ${visionResponse.status}`)
                     }
 
