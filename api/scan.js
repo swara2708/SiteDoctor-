@@ -14,7 +14,7 @@ export default async function handler(req, res) {
     }
 
     const groqApiKey = process.env.VITE_GROQ_API_KEY;
-    const resendApiKey = process.env.VITE_RESEND_API_KEY;
+    const resendApiKey = process.env.VITE_RESEND_API_KEY || process.env.RESEND_API_KEY;
 
     if (!groqApiKey) {
       throw new Error('VITE_GROQ_API_KEY is not configured on the server.');
