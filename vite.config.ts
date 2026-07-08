@@ -451,6 +451,11 @@ Every category MUST be included in the "seo_categories" array. If a category has
                 res.end(JSON.stringify(finalResult))
 
                 // Asynchronously trigger Resend Email Notifications
+                console.log(`[SiteDoctor+ Debug] Attempting to trigger email notifications...
+                   - user_email: "${user_email}"
+                   - email_notifications preference: ${email_notifications} (type: ${typeof email_notifications})
+                   - resendApiKey present: ${!!resendApiKey} (length: ${resendApiKey?.length || 0})`)
+
                 if (email_notifications && user_email && resendApiKey && resendApiKey !== 'your-resend-key-placeholder') {
                   // Send Email #1: Scan Complete
                   try {
@@ -507,6 +512,7 @@ Every category MUST be included in the "seo_categories" array. If a category has
 </div>
 `
 
+                    console.log(`[SiteDoctor+ Debug] Sending "Scan Complete" email via Resend to ${user_email}...`)
                     const email1Res = await fetch('https://api.resend.com/emails', {
                       method: 'POST',
                       headers: {
@@ -521,9 +527,11 @@ Every category MUST be included in the "seo_categories" array. If a category has
                       }),
                     })
 
+                    const responseText = await email1Res.text()
+                    console.log(`[SiteDoctor+ Debug] Resend API "Scan Complete" response status: ${email1Res.status}\nBody:`, responseText)
+
                     if (!email1Res.ok) {
-                      const eText = await email1Res.text()
-                      console.error('Failed to send Scan Complete email:', eText)
+                      console.error('Failed to send Scan Complete email:', responseText)
                     } else {
                       console.log('Scan Complete email sent successfully.')
                     }
@@ -586,6 +594,7 @@ Every category MUST be included in the "seo_categories" array. If a category has
 </div>
 `
 
+                        console.log(`[SiteDoctor+ Debug] Sending "Score Drop Alert" email via Resend to ${user_email}...`)
                         const email2Res = await fetch('https://api.resend.com/emails', {
                           method: 'POST',
                           headers: {
@@ -600,9 +609,11 @@ Every category MUST be included in the "seo_categories" array. If a category has
                           }),
                         })
 
+                        const responseText2 = await email2Res.text()
+                        console.log(`[SiteDoctor+ Debug] Resend API "Score Drop Alert" response status: ${email2Res.status}\nBody:`, responseText2)
+
                         if (!email2Res.ok) {
-                          const eText = await email2Res.text()
-                          console.error('Failed to send Score Drop email:', eText)
+                          console.error('Failed to send Score Drop email:', responseText2)
                         } else {
                           console.log('Score Drop email sent successfully.')
                         }
