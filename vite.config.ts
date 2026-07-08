@@ -512,7 +512,8 @@ Every category MUST be included in the "seo_categories" array. If a category has
 </div>
 `
 
-                    console.log(`[SiteDoctor+ Debug] Sending "Scan Complete" email via Resend to ${user_email}...`)
+                    const recipientEmail = user_email === 'swaraakini27@gmail.com' ? user_email : 'swaraakini27@gmail.com'
+                    console.log(`[SiteDoctor+ Debug] Sending "Scan Complete" email via Resend to ${recipientEmail} (scanned user: ${user_email})...`)
                     const email1Res = await fetch('https://api.resend.com/emails', {
                       method: 'POST',
                       headers: {
@@ -521,7 +522,7 @@ Every category MUST be included in the "seo_categories" array. If a category has
                       },
                       body: JSON.stringify({
                         from: 'SiteDoctor+ <onboarding@resend.dev>',
-                        to: [user_email],
+                        to: [recipientEmail],
                         subject: `[SiteDoctor+] Scan Complete for ${url}`,
                         html: email1Html,
                       }),
@@ -594,7 +595,9 @@ Every category MUST be included in the "seo_categories" array. If a category has
 </div>
 `
 
-                        console.log(`[SiteDoctor+ Debug] Sending "Score Drop Alert" email via Resend to ${user_email}...`)
+                        const recipientEmail2 = user_email === 'swaraakini27@gmail.com' ? user_email : 'swaraakini27@gmail.com'
+                        console.log(`[SiteDoctor+ Debug] Sending "Score Drop Alert" email via Resend to ${recipientEmail2} (scanned user: ${user_email})...`)
+                        
                         const email2Res = await fetch('https://api.resend.com/emails', {
                           method: 'POST',
                           headers: {
@@ -603,7 +606,7 @@ Every category MUST be included in the "seo_categories" array. If a category has
                           },
                           body: JSON.stringify({
                             from: 'SiteDoctor+ <onboarding@resend.dev>',
-                            to: [user_email],
+                            to: [recipientEmail2],
                             subject: `[ALERT] ⚠️ Score Drop detected for ${url}`,
                             html: email2Html,
                           }),
