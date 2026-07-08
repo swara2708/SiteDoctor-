@@ -293,7 +293,7 @@ Every category MUST be included in the "seo_categories" array. If a category has
 
                   try {
                     const payload = {
-                      model: 'llama-3.2-11b-vision-preview',
+                      model: 'meta-llama/llama-4-scout-17b-16e-instruct',
                       response_format: { type: 'json_object' },
                       messages: [
                         {
