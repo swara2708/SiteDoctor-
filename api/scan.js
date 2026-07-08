@@ -61,30 +61,93 @@ export default async function handler(req, res) {
       h3s.push(match[1].replace(/<[^>]*>/g, '').trim());
     }
 
-    // Image URLs
+    // Extract and resolve image URLs
     const rawImages = [];
-    const imgRegex = /<img[^>]*src=["']([\s\S]*?)["']/gi;
-    while ((match = imgRegex.exec(html)) !== null) {
-      rawImages.push(match[1].trim());
+    
+    // Match <img tags
+    const imgTagRegex = /<img([^>]+)>/gi;
+    let tagMatch;
+    while ((tagMatch = imgTagRegex.exec(html)) !== null) {
+      const attrsText = tagMatch[1];
+      
+      // Try data-src, data-lazy-src, src, or srcset
+      const dataSrcMatch = /data-src=["']?([^"'\s>]+)["']?/i.exec(attrsText);
+      if (dataSrcMatch) {
+        rawImages.push(dataSrcMatch[1].trim());
+        continue;
+      }
+      
+      const dataLazySrcMatch = /data-lazy-src=["']?([^"'\s>]+)["']?/i.exec(attrsText);
+      if (dataLazySrcMatch) {
+        rawImages.push(dataLazySrcMatch[1].trim());
+        continue;
+      }
+      
+      const srcMatch = /src=["']?([^"'\s>]+)["']?/i.exec(attrsText);
+      if (srcMatch) {
+        rawImages.push(srcMatch[1].trim());
+        continue;
+      }
+
+      const srcsetMatch = /srcset=["']?([^"'\s>]+)["']?/i.exec(attrsText);
+      if (srcsetMatch) {
+        const firstUrl = srcsetMatch[1].split(',')[0].trim().split(/\s+/)[0];
+        if (firstUrl) {
+          rawImages.push(firstUrl);
+        }
+      }
+    }
+
+    // Fallback: extract background images from url(...) definitions if no images found
+    if (rawImages.length === 0) {
+      const bgRegex = /url\(["']?([^"'\)]+)["']?\)/gi;
+      let bgMatch;
+      while ((bgMatch = bgRegex.exec(html)) !== null && rawImages.length < 5) {
+        rawImages.push(bgMatch[1].trim());
+      }
     }
 
     console.log(`[SiteDoctor+ Debug] Extracted Raw Image URLs:`, rawImages);
 
     // Resolve image URLs to absolute URLs & filter invalid ones
     const resolvedImages = [];
+    const validExtensions = ['.jpg', '.jpeg', '.png', '.webp', '.gif'];
+    
     for (const imgUrl of rawImages) {
       try {
         if (imgUrl.startsWith('data:')) {
+          // Allow base64 raster images
+          if (imgUrl.startsWith('data:image/jpeg') || imgUrl.startsWith('data:image/png') || imgUrl.startsWith('data:image/webp') || imgUrl.startsWith('data:image/gif')) {
+            resolvedImages.push(imgUrl);
+          }
           continue;
         }
+        
         const absUrl = new URL(imgUrl, url).href;
-        resolvedImages.push(absUrl);
+        
+        // Filter: only allow HTTP/HTTPS protocol
+        if (!absUrl.startsWith('http://') && !absUrl.startsWith('https://')) {
+          continue;
+        }
+
+        // Filter: only allow raster image extensions
+        let pathname = '';
+        try {
+          pathname = new URL(absUrl).pathname.toLowerCase();
+        } catch (_) {
+          pathname = absUrl.toLowerCase();
+        }
+
+        const hasValidExtension = validExtensions.some(ext => pathname.endsWith(ext));
+        if (hasValidExtension) {
+          resolvedImages.push(absUrl);
+        }
       } catch (_) {
         // Skip
       }
     }
 
-    console.log(`[SiteDoctor+ Debug] Resolved Absolute Image URLs:`, resolvedImages);
+    console.log(`[SiteDoctor+ Debug] Resolved Raster Absolute Image URLs:`, resolvedImages);
 
     const uniqueImages = Array.from(new Set(resolvedImages)).slice(0, 3);
 
