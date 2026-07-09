@@ -20,6 +20,7 @@ export default function LandingPage() {
           <nav className="hidden md:flex items-center gap-6 text-sm font-medium text-slate-400">
             <a href="#features" className="hover:text-emerald-400 transition-colors">Features</a>
             <a href="#how-it-works" className="hover:text-emerald-400 transition-colors">How It Works</a>
+            <a href="#about" className="hover:text-emerald-400 transition-colors">About</a>
           </nav>
 
           <div className="flex items-center gap-3">
@@ -41,18 +42,14 @@ export default function LandingPage() {
 
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 text-center max-w-4xl">
           <h1 className="text-4xl font-extrabold tracking-tight sm:text-5xl lg:text-6xl text-slate-100">
-            Know if your website is{' '}
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-teal-300">
-              healthy
-            </span>{' '}
-            AND{' '}
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-400 to-orange-400">
-              trustworthy
+              SiteDoctor+
             </span>
+            : AI-Powered Website SEO &amp; Content Credibility Scans
           </h1>
           
           <p className="mt-6 text-lg sm:text-xl text-slate-400 max-w-2xl mx-auto leading-relaxed">
-            SiteDoctor+ evaluates your web properties through a double-lens: optimizing standard SEO vitals while validating content truthfulness and image credibility using AI models.
+            Analyze and optimize your website's performance. SiteDoctor+ evaluates your web properties through a double-lens: auditing standard technical SEO vitals while validating content truthfulness, factual accuracy, and image credibility using state-of-the-art AI models.
           </p>
 
           <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4">
@@ -73,7 +70,7 @@ export default function LandingPage() {
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center max-w-2xl mx-auto mb-16">
             <h2 className="text-3xl font-bold tracking-tight text-slate-100 sm:text-4xl">
-              Advanced Web Diagnostics
+              Key Features: Advanced Web Diagnostics
             </h2>
             <p className="mt-4 text-slate-400">
               Go beyond simple metadata. Run deep scans covering indexing health, content authenticity, and media metadata.
@@ -86,7 +83,9 @@ export default function LandingPage() {
             <Card className="bg-slate-900/50 border-slate-800 text-slate-100 hover:border-emerald-500/50 transition-all duration-300">
               <CardHeader>
                 <Activity className="h-10 w-10 text-emerald-400 mb-3" />
-                <CardTitle className="text-xl font-bold">SEO Vitals Scan</CardTitle>
+                <CardTitle className="text-xl font-bold">
+                  <h3 className="text-xl font-bold">SEO Vitals Scan</h3>
+                </CardTitle>
                 <CardDescription className="text-slate-400 text-sm mt-1">
                   Checks meta tag structure, page load performance, response latency, and mobile compatibility indicators.
                 </CardDescription>
@@ -97,7 +96,9 @@ export default function LandingPage() {
             <Card className="bg-slate-900/50 border-slate-800 text-slate-100 hover:border-amber-500/50 transition-all duration-300">
               <CardHeader>
                 <ShieldAlert className="h-10 w-10 text-amber-400 mb-3" />
-                <CardTitle className="text-xl font-bold">Trust Intelligence</CardTitle>
+                <CardTitle className="text-xl font-bold">
+                  <h3 className="text-xl font-bold">Trust Intelligence</h3>
+                </CardTitle>
                 <CardDescription className="text-slate-400 text-sm mt-1">
                   Scans copywriting for AI generation indices, evaluates clinical or factual claims, and flags deceptive content.
                 </CardDescription>
@@ -108,7 +109,9 @@ export default function LandingPage() {
             <Card className="bg-slate-900/50 border-slate-800 text-slate-100 hover:border-emerald-500/50 transition-all duration-300">
               <CardHeader>
                 <Eye className="h-10 w-10 text-emerald-400 mb-3" />
-                <CardTitle className="text-xl font-bold">Image Verification</CardTitle>
+                <CardTitle className="text-xl font-bold">
+                  <h3 className="text-xl font-bold">Image Verification</h3>
+                </CardTitle>
                 <CardDescription className="text-slate-400 text-sm mt-1">
                   Leverages Groq Vision integrations to detect stock imagery, inspect compression metrics, and highlight anomalies.
                 </CardDescription>
@@ -119,7 +122,9 @@ export default function LandingPage() {
             <Card className="bg-slate-900/50 border-slate-800 text-slate-100 hover:border-amber-500/50 transition-all duration-300">
               <CardHeader>
                 <TrendingUp className="h-10 w-10 text-amber-400 mb-3" />
-                <CardTitle className="text-xl font-bold">Analytics Panel</CardTitle>
+                <CardTitle className="text-xl font-bold">
+                  <h3 className="text-xl font-bold">Analytics Panel</h3>
+                </CardTitle>
                 <CardDescription className="text-slate-400 text-sm mt-1">
                   Monitor indexing scoring trends, maintain verification logs, and toggle instant text notifications for server downtime.
                 </CardDescription>
@@ -135,7 +140,7 @@ export default function LandingPage() {
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center max-w-2xl mx-auto mb-16">
             <h2 className="text-3xl font-bold tracking-tight text-slate-100 sm:text-4xl">
-              Scan Your Site in Minutes
+              How It Works: Scan Your Site in Minutes
             </h2>
             <p className="mt-4 text-slate-400">
               Our automated diagnostic pipeline processes URLs asynchronously to generate deep index charts.
@@ -190,7 +195,50 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* 5. FOOTER */}
+      {/* 5. ABOUT SECTION */}
+      <section id="about" className="py-16 border-t border-slate-900 bg-slate-950/50">
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-4xl">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl font-bold tracking-tight text-slate-100 sm:text-4xl">
+              About SiteDoctor+
+            </h2>
+            <p className="mt-4 text-slate-400 text-lg">
+              The modern standard for comprehensive website diagnostics.
+            </p>
+          </div>
+
+          <div className="space-y-8 text-slate-300 leading-relaxed">
+            <div>
+              <h3 className="text-xl font-semibold text-emerald-400 mb-3">
+                Why SEO and Content Credibility Matter Together
+              </h3>
+              <p>
+                In the modern digital landscape, a website's success is determined by more than just traditional search engine optimization (SEO) vitals. While fast load times, mobile friendliness, and proper meta tag structures are essential for climbing search rankings, the authenticity and credibility of your content are what retain visitors and build lasting trust. SiteDoctor+ was created to bridge this gap, offering a unified platform that scans websites for both technical performance and semantic integrity.
+              </p>
+            </div>
+
+            <div>
+              <h3 className="text-xl font-semibold text-amber-400 mb-3">
+                Technical SEO Audits &amp; Semantic AI Verifications
+              </h3>
+              <p>
+                Our advanced technical scanner analyzes crucial SEO metrics, including Core Web Vitals, site response latencies, security configurations, and semantic HTML structures. This ensures that search crawlers can index your website efficiently and rank it appropriately. At the same time, our state-of-the-art AI analysis engine inspects your copywriting for signs of automated text generation, evaluates claims against trusted databases, and alerts you to any copy that might be flagged as low-quality or untrustworthy by modern search engines.
+              </p>
+            </div>
+
+            <div>
+              <h3 className="text-xl font-semibold text-emerald-400 mb-3">
+                Visual Asset &amp; Image Integrity Scans
+              </h3>
+              <p>
+                Furthermore, SiteDoctor+ integrates vision intelligence powered by advanced AI models to review your website's visual assets. Images are analyzed for compression quality, stock media repetition, and potential AI manipulation, helping you maintain a consistent and credible brand voice. By combining technical vitals with deep semantic verification, SiteDoctor+ gives you a comprehensive health index of your web property, ensuring it is optimized for both search engines and human readers.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* 6. FOOTER */}
       <footer className="border-t border-slate-900 bg-slate-950 py-8 text-slate-500 text-sm">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row items-center justify-between gap-4">
           <div>
@@ -199,6 +247,7 @@ export default function LandingPage() {
           <div className="flex gap-6">
             <a href="#features" className="hover:text-slate-300 transition-colors">Features</a>
             <a href="#how-it-works" className="hover:text-slate-300 transition-colors">How It Works</a>
+            <a href="#about" className="hover:text-slate-300 transition-colors">About</a>
             <Link to="/login" className="hover:text-slate-300 transition-colors">Login</Link>
             <Link to="/signup" className="hover:text-slate-300 transition-colors">Sign Up</Link>
           </div>
