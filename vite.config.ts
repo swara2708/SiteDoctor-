@@ -269,6 +269,18 @@ For any category with status "Needs Improvement" or "Critical", or any Trust fla
 }
 `
 
+                // Log the exact parameters/content being sent to Groq
+                console.log(`[SiteDoctor+ Debug] Preparing scan details for URL: ${url}`);
+                console.log(`[SiteDoctor+ Debug] Extracted content parameters:
+                  - Title: "${title}"
+                  - Description: "${description}"
+                  - H1 Headings: ${JSON.stringify(h1s)}
+                  - H2 Headings: ${JSON.stringify(h2s)}
+                  - H3 Headings: ${JSON.stringify(h3s)}
+                  - Image Count: ${uniqueImages.length}
+                  - Truncated Body Text Length: ${truncatedBody.length}
+                  - Truncated Body Text Sample (first 500 chars): "${truncatedBody.substring(0, 500)}..."`);
+
                 const groqResponse = await fetch('https://api.groq.com/openai/v1/chat/completions', {
                   method: 'POST',
                   headers: {
@@ -294,14 +306,28 @@ For any category with status "Needs Improvement" or "Critical", or any Trust fla
 
                 if (!groqResponse.ok) {
                   const errorText = await groqResponse.text()
+                  console.error(`[SiteDoctor+ Debug] Groq API returned HTTP error: ${groqResponse.status} - ${errorText}`);
                   throw new Error(`Groq API returned an error: ${groqResponse.status} - ${errorText}`)
                 }
 
                 const groqResultJson = (await groqResponse.json()) as any
                 const rawContent = groqResultJson.choices[0].message.content.trim()
 
-                // Parse the inner JSON
-                const parsedAudit = JSON.parse(rawContent)
+                // Log the raw response before parsing
+                console.log(`[SiteDoctor+ Debug] Raw Groq AI Response for ${url}:`, rawContent);
+
+                // Parse the inner JSON with strict error handling and logging
+                let parsedAudit: any;
+                try {
+                  parsedAudit = JSON.parse(rawContent)
+                  if (!parsedAudit || typeof parsedAudit.seo_score !== 'number' || typeof parsedAudit.trust_score !== 'number') {
+                    throw new Error("Missing required 'seo_score' or 'trust_score' fields in AI JSON response.")
+                  }
+                } catch (parseErr: any) {
+                  console.error(`[SiteDoctor+ Debug] Groq AI parsing failed or missing fields: ${parseErr.message}`);
+                  console.error(`[SiteDoctor+ Debug] Raw content was: ${rawContent}`);
+                  throw new Error(`Failed to parse AI audit results: ${parseErr.message}`)
+                }
 
                 const prepareLocalImageBase64 = async (imgUrl: string) => {
                   try {
@@ -642,6 +668,7 @@ For any category with status "Needs Improvement" or "Critical", or any Trust fla
                   }
                 }
               } catch (err: any) {
+                console.error(`[SiteDoctor+ Debug] Scan failed! No fallback score will be used. Error details:`, err.message);
                 res.statusCode = 500
                 res.setHeader('Content-Type', 'application/json')
                 res.end(JSON.stringify({ error: err.message || 'Scan failed.' }))

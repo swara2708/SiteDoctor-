@@ -179,11 +179,13 @@ export default function DashboardPage() {
   }
 
   const toggleSuggestion = (scanId: string, suggestionId: string) => {
+    console.log(`[SiteDoctor+ Debug] Toggling suggestion checkbox: scanId=${scanId}, suggestionId=${suggestionId}`);
     setAddressedSuggestions((prev) => {
       const currentList = prev[scanId] || []
       const newList = currentList.includes(suggestionId)
         ? currentList.filter((id) => id !== suggestionId)
         : [...currentList, suggestionId]
+      console.log(`[SiteDoctor+ Debug] Updated addressed suggestions for scanId=${scanId}:`, newList);
       return { ...prev, [scanId]: newList }
     })
   }
@@ -511,6 +513,10 @@ export default function DashboardPage() {
                   // 1. SEO report suggestions
                   const seoCategories = latestScan.seo_report?.categories || []
                   seoCategories.forEach((cat: any) => {
+                    // Skip Image Alt Text suggestions if there are no images on the page
+                    if (imgStats.total === 0 && cat.category_name === 'Image Alt Text') {
+                      return
+                    }
                     if (cat.status === 'Needs Improvement' || cat.status === 'Critical') {
                       list.push({
                         id: `seo-${cat.category_name}`,
@@ -739,7 +745,10 @@ export default function DashboardPage() {
                             
                             <div className="px-3 pb-3 pt-1 border-t border-slate-800/60 mt-1 grid grid-cols-1 gap-2.5 max-h-[350px] overflow-y-auto">
                               {(() => {
-                                const categories = latestScan.seo_report?.categories || []
+                                const rawCategories = latestScan.seo_report?.categories || []
+                                const categories = imgStats.total === 0 
+                                  ? rawCategories.filter((cat: any) => cat.category_name !== 'Image Alt Text')
+                                  : rawCategories
                                 
                                 const getCategoryIcon = (name: string) => {
                                   const lowerName = name.toLowerCase()
@@ -804,7 +813,7 @@ export default function DashboardPage() {
                         <div className="mt-3">
                           {imgStats.total === 0 ? (
                             <div className="text-[11px] text-slate-500 flex items-center gap-1.5 px-1 py-0.5">
-                              <ImageIcon className="h-3.5 w-3.5" /> No images found on this page.
+                              <ImageIcon className="h-3.5 w-3.5" /> No images found on this page — image analysis skipped.
                             </div>
                           ) : (
                             <details className="group border border-slate-800 rounded bg-slate-950/40 text-xs">
