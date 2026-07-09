@@ -508,7 +508,15 @@ export default function DashboardPage() {
                 const imgStats = latestScan ? getImageFlagsStats(latestScan) : { total: 0, flagged: 0 }
 
                 const suggestions = latestScan ? (() => {
-                  const list: Array<{ id: string; type: 'SEO' | 'Trust' | 'Image'; title: string; fix: string; priority: 'High' | 'Medium' | 'Low' }> = []
+                  const list: Array<{ 
+                    id: string; 
+                    type: 'SEO' | 'Trust' | 'Image'; 
+                    title: string; 
+                    fix: string; 
+                    priority: 'High' | 'Medium' | 'Low';
+                    excerpt?: string | null;
+                    reasoning?: string | null;
+                  }> = []
                   
                   // 1. SEO report suggestions
                   const seoCategories = latestScan.seo_report?.categories || []
@@ -536,7 +544,9 @@ export default function DashboardPage() {
                       type: 'Trust',
                       title: flg.flag,
                       fix: flg.explanation ? `Recommendation: ${flg.explanation}` : 'Improve site trust indicator.',
-                      priority: flg.priority || 'Medium'
+                      priority: flg.priority || 'Medium',
+                      excerpt: flg.excerpt || null,
+                      reasoning: flg.reasoning || null
                     })
                   })
 
@@ -722,6 +732,20 @@ export default function DashboardPage() {
                                       <div className="text-[10px] text-slate-400 leading-normal">
                                         {s.fix}
                                       </div>
+                                      {s.type === 'Trust' && s.excerpt && (
+                                        <div className="mt-2 p-2 bg-slate-950/60 border border-slate-850/65 rounded text-[10px] space-y-1.5">
+                                          <div>
+                                            <span className="font-semibold text-[9px] text-emerald-400/80 uppercase tracking-wider block mb-0.5">Flagged Excerpt</span>
+                                            <q className="italic text-slate-300">"{s.excerpt}"</q>
+                                          </div>
+                                          {s.reasoning && (
+                                            <div>
+                                              <span className="font-semibold text-[9px] text-amber-400/80 uppercase tracking-wider block mb-0.5">AI-Generation Analysis</span>
+                                              <p className="text-slate-400 leading-relaxed">{s.reasoning}</p>
+                                            </div>
+                                          )}
+                                        </div>
+                                      )}
                                     </div>
                                   </div>
                                 )

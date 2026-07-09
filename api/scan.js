@@ -191,6 +191,11 @@ For any category with status "Needs Improvement" or "Critical", or any Trust fla
 - "Medium": Significant factors (e.g. missing alt text, slow loading elements, duplicate/thin copy).
 - "Low": Minor details (e.g. heading order nesting, unoptimized minor meta tags).
 
+If the trust flag is "Potential AI-Generated Content", you MUST also include:
+- "excerpt": the exact sentence or phrase (1-2 sentences max) from the scraped body text that triggered the flag.
+- "reasoning": why this specific text seems AI-generated (e.g. "generic phrasing with no specific details", "repetitive sentence structure").
+For other flags, set "excerpt" and "reasoning" to null.
+
 {
   "seo_score": 85,
   "seo_categories": [
@@ -240,9 +245,11 @@ For any category with status "Needs Improvement" or "Critical", or any Trust fla
   "trust_score": 75,
   "trust_flags": [
     { 
-      "flag": "Title of the credibility flag", 
+      "flag": "Title of the credibility flag (e.g., 'Potential AI-Generated Content')", 
       "explanation": "Why this flag was raised, e.g. lack of author bio, copy reads like generic AI text",
-      "priority": "Medium"
+      "priority": "Medium",
+      "excerpt": "Specific sentence or phrase from the body text that triggered the flag (1-2 sentences max) or null.",
+      "reasoning": "Reason why this specific text seems AI-generated or null."
     }
   ]
 }
