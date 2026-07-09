@@ -15,7 +15,10 @@ import {
   FileText,
   ShieldAlert,
   ChevronDown,
+  AlertCircle,
 } from 'lucide-react'
+import { motion, AnimatePresence } from 'framer-motion'
+import AnimatedNumber from '../components/AnimatedNumber'
 import {
   ResponsiveContainer,
   LineChart,
@@ -57,6 +60,9 @@ interface Scan {
     flags?: Array<{
       flag: string
       explanation: string
+      priority?: string
+      excerpt?: string | null
+      reasoning?: string | null
     }>
   } | null
   image_flags: ImageFlag[] | null
@@ -241,7 +247,13 @@ export default function AnalyticsPage() {
   const hasAnyScans = sites.some(s => s.scans && s.scans.length > 0)
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col md:flex-row font-sans">
+    <motion.div 
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.3 }}
+      className="min-h-screen bg-slate-950 text-slate-100 flex flex-col md:flex-row font-sans"
+    >
       
       {/* SIDEBAR NAVIGATION */}
       <Sidebar activeTab="analytics" />
@@ -276,11 +288,20 @@ export default function AnalyticsPage() {
           </div>
 
           {/* STATUS BLOCK */}
-          {errorMsg && (
-            <div className="bg-red-500/10 border border-red-500/30 text-red-400 px-4 py-3 rounded-lg text-sm">
-              {errorMsg}
-            </div>
-          )}
+          <AnimatePresence>
+            {errorMsg && (
+              <motion.div 
+                initial={{ opacity: 0, y: -15 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -15 }}
+                transition={{ duration: 0.25 }}
+                className="bg-red-500/10 border border-red-500/30 text-red-400 px-4 py-3 rounded-lg text-sm flex items-start gap-2"
+              >
+                <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
+                <span>{errorMsg}</span>
+              </motion.div>
+            )}
+          </AnimatePresence>
 
           {loading ? (
             <div className="flex items-center justify-center py-20">
@@ -313,7 +334,7 @@ export default function AnalyticsPage() {
                     <Globe className="h-4 w-4 text-slate-650" />
                   </div>
                   <p className="text-2xl font-extrabold mt-2 text-slate-200">
-                    {totalSites}
+                    <AnimatedNumber value={totalSites} />
                   </p>
                 </Card>
                 <Card className="bg-slate-900/40 border-slate-800 text-slate-100 p-4">
@@ -322,7 +343,7 @@ export default function AnalyticsPage() {
                     <FileText className="h-4 w-4 text-slate-650" />
                   </div>
                   <p className="text-2xl font-extrabold mt-2 text-slate-200">
-                    {totalScans}
+                    <AnimatedNumber value={totalScans} />
                   </p>
                 </Card>
                 <Card className="bg-slate-900/40 border-slate-800 text-slate-100 p-4">
@@ -331,7 +352,7 @@ export default function AnalyticsPage() {
                     <Activity className="h-4 w-4 text-emerald-400" />
                   </div>
                   <p className="text-2xl font-extrabold mt-2 text-emerald-400">
-                    {avgCombined}%
+                    <AnimatedNumber value={avgCombined} />%
                   </p>
                 </Card>
                 <Card className="bg-slate-900/40 border-slate-800 text-slate-100 p-4">
@@ -381,6 +402,8 @@ export default function AnalyticsPage() {
                             strokeWidth={3} 
                             activeDot={{ r: 6 }} 
                             dot={{ r: 3 }}
+                            isAnimationActive={true}
+                            animationDuration={800}
                           />
                         </LineChart>
                       </ResponsiveContainer>
@@ -412,8 +435,8 @@ export default function AnalyticsPage() {
                           <YAxis domain={[0, 100]} stroke="#64748b" fontSize={10} />
                           <Tooltip contentStyle={{ backgroundColor: '#0f172a', borderColor: '#334155', color: '#f1f5f9' }} />
                           <Legend wrapperStyle={{ fontSize: 10, paddingTop: 10 }} />
-                          <Bar dataKey="SEO" fill="#10b981" radius={[4, 4, 0, 0]} />
-                          <Bar dataKey="Trust" fill="#f59e0b" radius={[4, 4, 0, 0]} />
+                          <Bar dataKey="SEO" fill="#10b981" radius={[4, 4, 0, 0]} isAnimationActive={true} animationDuration={800} />
+                          <Bar dataKey="Trust" fill="#f59e0b" radius={[4, 4, 0, 0]} isAnimationActive={true} animationDuration={800} />
                         </BarChart>
                       </ResponsiveContainer>
                     )}
@@ -446,6 +469,8 @@ export default function AnalyticsPage() {
                                 outerRadius={85}
                                 paddingAngle={3}
                                 dataKey="value"
+                                isAnimationActive={true}
+                                animationDuration={800}
                               >
                                 {pieChartData.map((entry, index) => (
                                   <Cell key={`cell-${index}`} fill={entry.color} />
@@ -484,6 +509,6 @@ export default function AnalyticsPage() {
         </div>
       </main>
 
-    </div>
+    </motion.div>
   )
 }

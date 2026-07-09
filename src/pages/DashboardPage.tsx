@@ -35,6 +35,8 @@ import {
   Trophy,
   Check,
 } from 'lucide-react'
+import { motion, AnimatePresence } from 'framer-motion'
+import AnimatedNumber from '../components/AnimatedNumber'
 
 interface ImageFlag {
   image_url: string
@@ -102,24 +104,64 @@ function ProgressRing({ value, label, type, size = 68 }: { value: number; label:
           fill="transparent"
         />
         {/* Fill */}
-        <circle
+        <motion.circle
           cx={size / 2}
           cy={size / 2}
           r={radius}
           stroke={strokeColor}
-          className={`${colorClass} transition-all duration-1000 ease-out`}
+          className={colorClass}
           strokeWidth={strokeWidth}
           fill="transparent"
           strokeDasharray={circumference}
-          strokeDashoffset={strokeDashoffset}
+          initial={{ strokeDashoffset: circumference }}
+          animate={{ strokeDashoffset: strokeDashoffset }}
+          transition={{ duration: 1.0, ease: 'easeOut' }}
           strokeLinecap="round"
         />
       </svg>
       {/* Center number */}
       <span className="absolute text-[13px] font-extrabold text-slate-100" style={{ top: 'calc(50% - 14px)' }}>
-        {value}
+        <AnimatedNumber value={value} />
       </span>
       <span className="text-[9px] uppercase font-bold tracking-wider text-slate-500 mt-2">{label}</span>
+    </div>
+  )
+}
+interface CollapsibleSectionProps {
+  title: string
+  icon: React.ReactNode
+  children: React.ReactNode
+}
+
+function CollapsibleSection({ title, icon, children }: CollapsibleSectionProps) {
+  const [isOpen, setIsOpen] = useState(false)
+  return (
+    <div className="border border-slate-800 rounded bg-slate-950/40 text-xs overflow-hidden mt-3">
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        className="w-full px-3 py-2 flex items-center justify-between font-semibold text-slate-400 select-none hover:text-slate-200 focus:outline-none transition-colors"
+      >
+        <span className="flex items-center gap-1.5">
+          {icon}
+          {title}
+        </span>
+        <ChevronDown className={`h-3.5 w-3.5 transition-transform duration-300 ${isOpen ? 'rotate-180' : ''} text-slate-500`} />
+      </button>
+      
+      <AnimatePresence initial={false}>
+        {isOpen && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.3, ease: "easeInOut" }}
+          >
+            <div className="px-3 pb-3 pt-1 border-t border-slate-800/60 mt-1">
+              {children}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   )
 }
@@ -420,7 +462,13 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col md:flex-row font-sans">
+    <motion.div 
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.3 }}
+      className="min-h-screen bg-slate-950 text-slate-100 flex flex-col md:flex-row font-sans"
+    >
       
       {/* SIDEBAR NAVIGATION */}
       <Sidebar activeTab="sites" />
@@ -444,17 +492,31 @@ export default function DashboardPage() {
           </div>
 
           {/* ERROR STATUS BLOCK */}
-          {errorMsg && !isAddOpen && !isEditOpen && !isDeleteOpen && (
-            <div className="bg-red-500/10 border border-red-500/30 text-red-400 px-4 py-3 rounded-lg text-sm">
-              {errorMsg}
-            </div>
-          )}
+          <AnimatePresence>
+            {errorMsg && !isAddOpen && !isEditOpen && !isDeleteOpen && (
+              <motion.div 
+                initial={{ opacity: 0, y: -15 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -15 }}
+                transition={{ duration: 0.25 }}
+                className="bg-red-500/10 border border-red-500/30 text-red-400 px-4 py-3 rounded-lg text-sm flex items-start gap-2"
+              >
+                <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
+                <span>{errorMsg}</span>
+              </motion.div>
+            )}
+          </AnimatePresence>
 
           {/* SITES GRID LIST */}
           {loading ? (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {[1, 2].map((n) => (
-                <div key={n} className="bg-slate-900/50 border border-slate-800 rounded-xl p-6 space-y-6 animate-pulse">
+                <motion.div 
+                  key={n} 
+                  animate={{ opacity: [0.6, 1, 0.6] }}
+                  transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
+                  className="bg-slate-900/50 border border-slate-800 rounded-xl p-6 space-y-6"
+                >
                   <div className="flex items-center justify-between gap-4">
                     <div className="space-y-2 w-2/3">
                       <div className="h-4 bg-slate-850 rounded w-3/4"></div>
@@ -476,7 +538,7 @@ export default function DashboardPage() {
                     <div className="h-3 bg-slate-850 rounded w-1/4"></div>
                     <div className="h-4 bg-slate-850 rounded w-1/3"></div>
                   </div>
-                </div>
+                </motion.div>
               ))}
             </div>
           ) : sites.length === 0 ? (
@@ -501,7 +563,8 @@ export default function DashboardPage() {
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
-              {sites.map((site) => {
+              <AnimatePresence mode="popLayout">
+                {sites.map((site, index) => {
                 const latestScan = getLatestScan(site)
                 const isScanning = !!scanningSites[site.id]
                 const scanError = scanErrors[site.id]
@@ -605,8 +668,45 @@ export default function DashboardPage() {
                 const addressedList = latestScan ? (addressedSuggestions[latestScan.id] || []) : []
 
                 return (
-                  <Card key={site.id} className="bg-slate-900/50 border-slate-800 text-slate-100 hover:border-slate-700/80 transition-all flex flex-col justify-between">
-                    <CardHeader className="pb-4">
+                  <motion.div
+                    key={site.id}
+                    layout
+                    initial={{ opacity: 0, y: 30 }}
+                    animate={{ 
+                      opacity: 1, 
+                      y: 0, 
+                      transition: { 
+                        duration: 0.4, 
+                        ease: 'easeOut',
+                        delay: index * 0.05 
+                      } 
+                    }}
+                    exit={{ 
+                      opacity: 0, 
+                      scale: 0.95,
+                      y: -20,
+                      transition: { duration: 0.3 } 
+                    }}
+                    className="h-full flex flex-col"
+                  >
+                    <Card className={`relative bg-slate-900/50 border-slate-800 text-slate-100 hover:border-slate-700/80 transition-all flex flex-col justify-between h-full overflow-hidden ${
+                      scanningSites[site.id] ? 'border-emerald-500/40 ring-1 ring-emerald-500/20 shadow-lg shadow-emerald-500/5' : ''
+                    }`}>
+                      {scanningSites[site.id] && (
+                        <>
+                          <motion.div 
+                            className="absolute inset-x-0 h-0.5 bg-gradient-to-r from-transparent via-emerald-400 to-transparent opacity-80 z-20 pointer-events-none"
+                            animate={{ y: [0, 450, 0] }}
+                            transition={{ duration: 2.5, repeat: Infinity, ease: "easeInOut" }}
+                          />
+                          <motion.div 
+                            className="absolute inset-0 bg-emerald-500/5 pointer-events-none z-10"
+                            animate={{ opacity: [0.1, 0.4, 0.1] }}
+                            transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
+                          />
+                        </>
+                      )}
+                    <CardHeader className="pb-4 relative z-20">
                       <div className="flex items-start justify-between gap-4">
                         <div className="truncate">
                           <CardTitle className="text-lg font-bold text-slate-200 truncate" title={site.nickname || site.url}>
@@ -686,8 +786,9 @@ export default function DashboardPage() {
                             </div>
                           ) : (
                             <div className="space-y-2 max-h-[300px] overflow-y-auto pr-1">
-                              {suggestions.map((s) => {
-                                const isAddressed = addressedList.includes(s.id)
+                              <AnimatePresence initial={false}>
+                                {suggestions.map((s, sIdx) => {
+                                  const isAddressed = addressedList.includes(s.id)
                                 
                                 const getPriorityStyles = (p: string) => {
                                   if (p === 'High') return 'bg-red-500/10 text-red-400 border-red-500/20'
@@ -696,8 +797,13 @@ export default function DashboardPage() {
                                 }
 
                                 return (
-                                  <div 
+                                  <motion.div 
                                     key={s.id}
+                                    layout
+                                    initial={{ opacity: 0, y: 15 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    exit={{ opacity: 0, scale: 0.95 }}
+                                    transition={{ duration: 0.3, delay: sIdx * 0.04 }}
                                     className={`bg-slate-950/30 border rounded-lg p-2.5 flex gap-2.5 transition-all duration-300 ${
                                       isAddressed 
                                         ? 'border-slate-800/40 opacity-55 line-through decoration-slate-600' 
@@ -747,9 +853,10 @@ export default function DashboardPage() {
                                         </div>
                                       )}
                                     </div>
-                                  </div>
+                                  </motion.div>
                                 )
                               })}
+                              </AnimatePresence>
                             </div>
                           )}
                         </div>
@@ -757,79 +864,79 @@ export default function DashboardPage() {
 
                       {/* Display SEO Health Breakdown list */}
                       {latestScan && !isScanning && (
-                        <div className="mt-3 border border-slate-800 rounded bg-slate-950/40 text-xs">
-                          <details className="group">
-                            <summary className="px-3 py-2 cursor-pointer font-semibold text-slate-400 select-none flex items-center justify-between hover:text-slate-200">
-                              <span className="flex items-center gap-1.5">
-                                <Activity className="h-3.5 w-3.5 text-emerald-400" />
-                                SEO Health Breakdown
-                              </span>
-                              <ChevronDown className="h-3.5 w-3.5 transition-transform group-open:rotate-180 text-slate-500" />
-                            </summary>
-                            
-                            <div className="px-3 pb-3 pt-1 border-t border-slate-800/60 mt-1 grid grid-cols-1 gap-2.5 max-h-[350px] overflow-y-auto">
-                              {(() => {
-                                const rawCategories = latestScan.seo_report?.categories || []
-                                const categories = imgStats.total === 0 
-                                  ? rawCategories.filter((cat: any) => cat.category_name !== 'Image Alt Text')
-                                  : rawCategories
+                        <CollapsibleSection
+                          title="SEO Health Breakdown"
+                          icon={<Activity className="h-3.5 w-3.5 text-emerald-400" />}
+                        >
+                          <div className="grid grid-cols-1 gap-2.5 max-h-[350px] overflow-y-auto pt-1">
+                            {(() => {
+                              const rawCategories = latestScan.seo_report?.categories || []
+                              const categories = imgStats.total === 0 
+                                ? rawCategories.filter((cat: any) => cat.category_name !== 'Image Alt Text')
+                                : rawCategories
                                 
-                                const getCategoryIcon = (name: string) => {
-                                  const lowerName = name.toLowerCase()
-                                  if (lowerName.includes('meta')) return <Tag className="h-3.5 w-3.5 text-emerald-400" />
-                                  if (lowerName.includes('heading')) return <List className="h-3.5 w-3.5 text-emerald-400" />
-                                  if (lowerName.includes('speed')) return <Gauge className="h-3.5 w-3.5 text-emerald-400" />
-                                  if (lowerName.includes('mobile') || lowerName.includes('friend')) return <Smartphone className="h-3.5 w-3.5 text-emerald-400" />
-                                  if (lowerName.includes('content') || lowerName.includes('quality')) return <FileText className="h-3.5 w-3.5 text-emerald-400" />
-                                  return <ImageIcon className="h-3.5 w-3.5 text-emerald-400" />
-                                }
+                              const getCategoryIcon = (name: string) => {
+                                const lowerName = name.toLowerCase()
+                                if (lowerName.includes('meta')) return <Tag className="h-3.5 w-3.5 text-emerald-400" />
+                                if (lowerName.includes('heading')) return <List className="h-3.5 w-3.5 text-emerald-400" />
+                                if (lowerName.includes('speed')) return <Gauge className="h-3.5 w-3.5 text-emerald-400" />
+                                if (lowerName.includes('mobile') || lowerName.includes('friend')) return <Smartphone className="h-3.5 w-3.5 text-emerald-400" />
+                                if (lowerName.includes('content') || lowerName.includes('quality')) return <FileText className="h-3.5 w-3.5 text-emerald-400" />
+                                return <ImageIcon className="h-3.5 w-3.5 text-emerald-400" />
+                              }
 
-                                const getStatusStyles = (status: string) => {
-                                  const val = (status || '').toLowerCase()
-                                  if (val === 'good') return 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
-                                  if (val === 'critical') return 'bg-red-500/10 text-red-400 border-red-500/20'
-                                  return 'bg-amber-500/10 text-amber-400 border-amber-500/20'
-                                }
+                              const getStatusStyles = (status: string) => {
+                                const val = (status || '').toLowerCase()
+                                if (val === 'good') return 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+                                if (val === 'critical') return 'bg-red-500/10 text-red-400 border-red-500/20'
+                                return 'bg-amber-500/10 text-amber-400 border-amber-500/20'
+                              }
 
-                                if (categories.length === 0) {
-                                  return (
-                                    <p className="text-[11px] text-slate-500 italic text-center py-2">
-                                      No detailed SEO breakdown available for this scan version.
-                                    </p>
-                                  )
-                                }
+                              if (categories.length === 0) {
+                                return (
+                                  <p className="text-[11px] text-slate-500 italic text-center py-2">
+                                    No detailed SEO breakdown available for this scan version.
+                                  </p>
+                                )
+                              }
 
-                                return categories.map((cat: any, idx: number) => (
-                                  <div 
-                                    key={idx} 
-                                    className="bg-slate-900/40 border border-slate-850/80 rounded-lg p-2.5 space-y-1.5 hover:-translate-y-0.5 hover:shadow hover:shadow-emerald-500/5 hover:border-slate-800/80 transition-all duration-300"
-                                  >
-                                    <div className="flex items-center justify-between gap-2">
-                                      <div className="flex items-center gap-1.5">
-                                        {getCategoryIcon(cat.category_name)}
-                                        <span className="text-[11px] font-bold text-slate-300">{cat.category_name}</span>
-                                      </div>
-                                      <span className={`px-1.5 py-0.2 rounded border text-[8px] font-extrabold uppercase tracking-wide ${getStatusStyles(cat.status)}`}>
-                                        {cat.status}
-                                      </span>
+                              return categories.map((cat: any, idx: number) => (
+                                <motion.div 
+                                  key={cat.category_name} 
+                                  initial={{ opacity: 0, y: 10 }}
+                                  animate={{ opacity: 1, y: 0 }}
+                                  transition={{ duration: 0.3, delay: idx * 0.05 }}
+                                  className="bg-slate-900/40 border border-slate-850/80 rounded-lg p-2.5 space-y-1.5 hover:-translate-y-0.5 hover:shadow hover:shadow-emerald-500/5 hover:border-slate-800/80 transition-all duration-300"
+                                >
+                                  <div className="flex items-center justify-between gap-2">
+                                    <div className="flex items-center gap-1.5">
+                                      {getCategoryIcon(cat.category_name)}
+                                      <span className="text-[11px] font-bold text-slate-300">{cat.category_name}</span>
                                     </div>
-                                    
-                                    <p className="text-[11px] text-slate-400 leading-normal">
-                                      {cat.explanation}
-                                    </p>
-                                    
-                                    {cat.fix_suggestion && cat.fix_suggestion !== 'None required.' && (
-                                      <div className="bg-slate-950/40 border border-slate-850/40 rounded p-1.5 text-[10px] text-slate-350">
-                                        <span className="font-semibold text-[9px] text-amber-400/80 uppercase tracking-wider block mb-0.5">Recommended Fix</span>
-                                        {cat.fix_suggestion}
-                                      </div>
-                                    )}
+                                    <motion.span 
+                                      animate={{ scale: [1, 1.05, 1] }}
+                                      transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+                                      className={`px-1.5 py-0.2 rounded border text-[8px] font-extrabold uppercase tracking-wide ${getStatusStyles(cat.status)}`}
+                                    >
+                                      {cat.status}
+                                    </motion.span>
                                   </div>
-                                ))
-                              })()}
-                            </div>
-                          </details>
-                        </div>
+                                  
+                                  <p className="text-[11px] text-slate-400 leading-normal">
+                                    {cat.explanation}
+                                  </p>
+                                  
+                                  {cat.fix_suggestion && cat.fix_suggestion !== 'None required.' && (
+                                    <div className="bg-slate-950/40 border border-slate-850/40 rounded p-1.5 text-[10px] text-slate-350">
+                                      <span className="font-semibold text-[9px] text-amber-400/80 uppercase tracking-wider block mb-0.5">Recommended Fix</span>
+                                      {cat.fix_suggestion}
+                                    </div>
+                                  )}
+                                </motion.div>
+                              ))
+                            })()}
+                          </div>
+                        </CollapsibleSection>
                       )}
 
                       {/* Display Image Flags list */}
@@ -840,16 +947,11 @@ export default function DashboardPage() {
                               <ImageIcon className="h-3.5 w-3.5" /> No images found on this page — image analysis skipped.
                             </div>
                           ) : (
-                            <details className="group border border-slate-800 rounded bg-slate-950/40 text-xs">
-                              <summary className="px-3 py-2 cursor-pointer font-semibold text-slate-400 select-none flex items-center justify-between hover:text-slate-200">
-                                <span className="flex items-center gap-1.5">
-                                  <ImageIcon className="h-3.5 w-3.5 text-slate-500" />
-                                  Image Flags ({imgStats.flagged} of {imgStats.total} flagged)
-                                </span>
-                                <ChevronDown className="h-3.5 w-3.5 transition-transform group-open:rotate-180 text-slate-500" />
-                              </summary>
-                              
-                              <div className="px-3 pb-3 pt-1 border-t border-slate-800/60 space-y-3 divide-y divide-slate-800/40">
+                            <CollapsibleSection
+                              title={`Image Flags (${imgStats.flagged} of ${imgStats.total} flagged)`}
+                              icon={<ImageIcon className="h-3.5 w-3.5 text-slate-500" />}
+                            >
+                              <div className="space-y-3 divide-y divide-slate-800/40 pt-1">
                                 {latestScan.image_flags?.map((img, idx) => {
 
                                   return (
@@ -905,7 +1007,7 @@ export default function DashboardPage() {
                                   )
                                 })}
                               </div>
-                            </details>
+                            </CollapsibleSection>
                           )}
                         </div>
                       )}
@@ -972,9 +1074,11 @@ export default function DashboardPage() {
                       </div>
                     </div>
                   </Card>
-                )
-              })}
-            </div>
+                </motion.div>
+              )
+            })}
+          </AnimatePresence>
+        </div>
           )}
 
         </div>
@@ -1156,6 +1260,6 @@ export default function DashboardPage() {
         </DialogFooter>
       </Dialog>
 
-    </div>
+    </motion.div>
   )
 }

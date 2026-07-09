@@ -2,6 +2,7 @@ import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
 import { Button } from './ui/button'
 import { Activity, Globe, TrendingUp, Settings, LogOut } from 'lucide-react'
+import { motion } from 'framer-motion'
 
 interface SidebarProps {
   activeTab: 'sites' | 'analytics' | 'settings'
@@ -28,41 +29,62 @@ export default function Sidebar({ activeTab }: SidebarProps) {
             </span>
           </div>
 
-          <nav className="space-y-1">
+          <nav className="space-y-1 relative">
             <button 
               onClick={() => navigate('/dashboard')}
-              className={`w-full flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-md border transition-all ${
+              className={`relative w-full flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-md transition-colors ${
                 activeTab === 'sites'
-                  ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
-                  : 'text-slate-400 border-transparent hover:text-slate-200 hover:bg-slate-800/50'
+                  ? 'text-emerald-400 font-bold'
+                  : 'text-slate-400 hover:text-slate-200'
               }`}
             >
+              {activeTab === 'sites' && (
+                <motion.div
+                  layoutId="active-nav-pill"
+                  className="absolute inset-0 bg-emerald-500/10 border border-emerald-500/20 rounded-md -z-10"
+                  transition={{ type: "spring", stiffness: 380, damping: 30 }}
+                />
+              )}
               <Globe className="h-4 w-4" aria-hidden="true" />
-              My Sites
+              <span>My Sites</span>
             </button>
             
             <button 
               onClick={() => navigate('/dashboard/analytics')}
-              className={`w-full flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-md border transition-all ${
+              className={`relative w-full flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-md transition-colors ${
                 activeTab === 'analytics'
-                  ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
-                  : 'text-slate-400 border-transparent hover:text-slate-200 hover:bg-slate-800/50'
+                  ? 'text-emerald-400 font-bold'
+                  : 'text-slate-400 hover:text-slate-200'
               }`}
             >
+              {activeTab === 'analytics' && (
+                <motion.div
+                  layoutId="active-nav-pill"
+                  className="absolute inset-0 bg-emerald-500/10 border border-emerald-500/20 rounded-md -z-10"
+                  transition={{ type: "spring", stiffness: 380, damping: 30 }}
+                />
+              )}
               <TrendingUp className="h-4 w-4" aria-hidden="true" />
-              Analytics
+              <span>Analytics</span>
             </button>
             
             <button 
               onClick={() => navigate('/dashboard/settings')}
-              className={`w-full flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-md border transition-all ${
+              className={`relative w-full flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-md transition-colors ${
                 activeTab === 'settings'
-                  ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
-                  : 'text-slate-400 border-transparent hover:text-slate-200 hover:bg-slate-800/50'
+                  ? 'text-emerald-400 font-bold'
+                  : 'text-slate-400 hover:text-slate-200'
               }`}
             >
+              {activeTab === 'settings' && (
+                <motion.div
+                  layoutId="active-nav-pill"
+                  className="absolute inset-0 bg-emerald-500/10 border border-emerald-500/20 rounded-md -z-10"
+                  transition={{ type: "spring", stiffness: 380, damping: 30 }}
+                />
+              )}
               <Settings className="h-4 w-4" aria-hidden="true" />
-              Settings
+              <span>Settings</span>
             </button>
           </nav>
         </div>
@@ -95,42 +117,58 @@ export default function Sidebar({ activeTab }: SidebarProps) {
           </span>
         </div>
 
-        {/* Horizontal Navigation Buttons */}
-        <nav className="flex items-center gap-1">
+        <nav className="flex items-center gap-1 relative">
           <button 
             onClick={() => navigate('/dashboard')}
-            className={`p-2 rounded-md border text-xs font-semibold ${
-              activeTab === 'sites'
-                ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
-                : 'text-slate-400 border-transparent'
+            className={`relative p-2 rounded-md transition-colors ${
+              activeTab === 'sites' ? 'text-emerald-400' : 'text-slate-400'
             }`}
             aria-label="My Sites"
             title="My Sites"
           >
+            {activeTab === 'sites' && (
+              <motion.div
+                layoutId="active-mobile-pill"
+                className="absolute inset-0 bg-emerald-500/10 border border-emerald-500/20 rounded-md -z-10"
+                transition={{ type: "spring", stiffness: 380, damping: 30 }}
+              />
+            )}
             <Globe className="h-4.5 w-4.5" />
           </button>
+          
           <button 
             onClick={() => navigate('/dashboard/analytics')}
-            className={`p-2 rounded-md border text-xs font-semibold ${
-              activeTab === 'analytics'
-                ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
-                : 'text-slate-400 border-transparent'
+            className={`relative p-2 rounded-md transition-colors ${
+              activeTab === 'analytics' ? 'text-emerald-400' : 'text-slate-400'
             }`}
             aria-label="Analytics"
             title="Analytics"
           >
+            {activeTab === 'analytics' && (
+              <motion.div
+                layoutId="active-mobile-pill"
+                className="absolute inset-0 bg-emerald-500/10 border border-emerald-500/20 rounded-md -z-10"
+                transition={{ type: "spring", stiffness: 380, damping: 30 }}
+              />
+            )}
             <TrendingUp className="h-4.5 w-4.5" />
           </button>
+          
           <button 
             onClick={() => navigate('/dashboard/settings')}
-            className={`p-2 rounded-md border text-xs font-semibold ${
-              activeTab === 'settings'
-                ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
-                : 'text-slate-400 border-transparent'
+            className={`relative p-2 rounded-md transition-colors ${
+              activeTab === 'settings' ? 'text-emerald-400' : 'text-slate-400'
             }`}
             aria-label="Settings"
             title="Settings"
           >
+            {activeTab === 'settings' && (
+              <motion.div
+                layoutId="active-mobile-pill"
+                className="absolute inset-0 bg-emerald-500/10 border border-emerald-500/20 rounded-md -z-10"
+                transition={{ type: "spring", stiffness: 380, damping: 30 }}
+              />
+            )}
             <Settings className="h-4.5 w-4.5" />
           </button>
           

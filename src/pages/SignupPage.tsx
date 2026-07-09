@@ -5,6 +5,7 @@ import { supabase } from '../lib/supabaseClient'
 import { Button } from '../components/ui/button'
 import { Input } from '../components/ui/input'
 import { Activity, AlertCircle, Loader2 } from 'lucide-react'
+import { motion } from 'framer-motion'
 
 export default function SignupPage() {
   const [fullName, setFullName] = useState('')
@@ -42,12 +43,24 @@ export default function SignupPage() {
       return 'Password is required.'
     }
     if (val.length < 6) {
-      return 'Password must be at least 6 characters long.'
+      return 'Password must be at least 6 characters.'
     }
     return ''
   }
 
-  const handleSignup = async (e: FormEvent) => {
+  const handleNameBlur = () => {
+    setNameError(validateName(fullName))
+  }
+
+  const handleEmailBlur = () => {
+    setEmailError(validateEmail(email))
+  }
+
+  const handlePasswordBlur = () => {
+    setPasswordError(validatePassword(password))
+  }
+
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault()
     setErrorMsg('')
 
@@ -90,7 +103,13 @@ export default function SignupPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-slate-950 px-4 py-12 sm:px-6 lg:px-8 font-sans">
+    <motion.div 
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.3 }}
+      className="flex min-h-screen items-center justify-center bg-slate-950 px-4 py-12 sm:px-6 lg:px-8 font-sans"
+    >
       <div className="w-full max-w-md space-y-8 bg-slate-900 p-8 rounded-xl border border-slate-800 shadow-2xl">
         <div className="flex flex-col items-center">
           <div className="flex items-center gap-2 cursor-pointer mb-2" onClick={() => navigate('/')}>
@@ -105,7 +124,7 @@ export default function SignupPage() {
           <p className="mt-1.5 text-center text-sm text-slate-400">
             Already have an account?{' '}
             <Link to="/login" className="font-semibold text-emerald-400 hover:text-emerald-350 hover:underline">
-              Sign in to exist account
+              Sign in to existing account
             </Link>
           </p>
         </div>
@@ -117,7 +136,7 @@ export default function SignupPage() {
           </div>
         )}
 
-        <form className="mt-6 space-y-5" onSubmit={handleSignup} noValidate>
+        <form className="mt-6 space-y-5" onSubmit={handleSubmit} noValidate>
           <div className="space-y-4">
             <div>
               <label htmlFor="full-name" className="block text-xs font-semibold text-slate-400 mb-1.5">
@@ -131,16 +150,15 @@ export default function SignupPage() {
                 value={fullName}
                 onChange={(e) => {
                   setFullName(e.target.value)
-                  if (nameError) setNameError(validateName(e.target.value))
+                  if (nameError) setNameError('')
                 }}
-                onBlur={() => setNameError(validateName(fullName))}
-                aria-invalid={!!nameError}
-                aria-describedby={nameError ? "name-error" : undefined}
+                onBlur={handleNameBlur}
+                className={nameError ? 'border-red-500 focus:ring-red-500' : ''}
                 placeholder="John Doe"
                 disabled={loading}
               />
               {nameError && (
-                <p id="name-error" className="mt-1.5 text-xs text-red-400 font-medium">
+                <p className="mt-1.5 text-xs text-red-400 font-medium">
                   {nameError}
                 </p>
               )}
@@ -158,16 +176,15 @@ export default function SignupPage() {
                 value={email}
                 onChange={(e) => {
                   setEmail(e.target.value)
-                  if (emailError) setEmailError(validateEmail(e.target.value))
+                  if (emailError) setEmailError('')
                 }}
-                onBlur={() => setEmailError(validateEmail(email))}
-                aria-invalid={!!emailError}
-                aria-describedby={emailError ? "email-error" : undefined}
+                onBlur={handleEmailBlur}
+                className={emailError ? 'border-red-500 focus:ring-red-500' : ''}
                 placeholder="you@example.com"
                 disabled={loading}
               />
               {emailError && (
-                <p id="email-error" className="mt-1.5 text-xs text-red-400 font-medium">
+                <p className="mt-1.5 text-xs text-red-400 font-medium">
                   {emailError}
                 </p>
               )}
@@ -185,16 +202,15 @@ export default function SignupPage() {
                 value={password}
                 onChange={(e) => {
                   setPassword(e.target.value)
-                  if (passwordError) setPasswordError(validatePassword(e.target.value))
+                  if (passwordError) setPasswordError('')
                 }}
-                onBlur={() => setPasswordError(validatePassword(password))}
-                aria-invalid={!!passwordError}
-                aria-describedby={passwordError ? "password-error" : undefined}
-                placeholder="Minimum 6 characters"
+                onBlur={handlePasswordBlur}
+                className={passwordError ? 'border-red-500 focus:ring-red-500' : ''}
+                placeholder="Min 6 characters"
                 disabled={loading}
               />
               {passwordError && (
-                <p id="password-error" className="mt-1.5 text-xs text-red-400 font-medium">
+                <p className="mt-1.5 text-xs text-red-400 font-medium">
                   {passwordError}
                 </p>
               )}
@@ -202,23 +218,25 @@ export default function SignupPage() {
           </div>
 
           <div className="pt-2">
-            <Button
-              type="submit"
-              disabled={loading}
-              className="w-full bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold flex items-center justify-center gap-2"
-            >
-              {loading ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
-                  Creating account...
-                </>
-              ) : (
-                'Create Account'
-              )}
-            </Button>
+            <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+              <Button
+                type="submit"
+                disabled={loading}
+                className="w-full bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold flex items-center justify-center gap-2"
+              >
+                {loading ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+                    Creating account...
+                  </>
+                ) : (
+                  'Create Account'
+                )}
+              </Button>
+            </motion.div>
           </div>
         </form>
       </div>
-    </div>
+    </motion.div>
   )
 }
