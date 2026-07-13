@@ -25,10 +25,12 @@ import {
   Play,
   Loader2,
   AlertCircle,
+  Download
 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { ResponsiveContainer, LineChart, Line } from 'recharts'
 import AnimatedNumber from '../components/AnimatedNumber'
+import { exportToPDF } from '../utils/pdfExport'
 
 interface ImageFlag {
   image_url: string
@@ -147,6 +149,19 @@ export default function DashboardPage() {
   // Action loading state
   const [actionLoading, setActionLoading] = useState(false)
   const [emailNotifications, setEmailNotifications] = useState(true)
+  const [downloadingPdfId, setDownloadingPdfId] = useState<string | null>(null)
+
+  const handleDownloadPdf = async (siteName: string, url: string, scan: any) => {
+    setDownloadingPdfId(scan.id)
+    try {
+      exportToPDF(siteName, url, scan)
+    } catch (err: any) {
+      console.error('[SiteDoctor+] PDF generation error:', err)
+      alert('Failed to export PDF report. Please try again.')
+    } finally {
+      setDownloadingPdfId(null)
+    }
+  }
 
   // Form Inline Validation Errors
   const [addUrlError, setAddUrlError] = useState('')
@@ -669,15 +684,32 @@ export default function DashboardPage() {
                       
                       <div className="flex items-center gap-2">
                         {latestScan && (
-                          <Link to={`/dashboard/sites/${site.id}`}>
+                          <>
                             <Button
+                              onClick={() => handleDownloadPdf(site.nickname || site.url, site.url, latestScan)}
+                              disabled={downloadingPdfId === latestScan.id}
                               variant="outline"
                               size="sm"
-                              className="h-8 text-xs border-slate-800 text-slate-350 hover:bg-slate-800 hover:text-slate-100"
+                              className="h-8 w-8 p-0 border-slate-800 text-slate-350 hover:bg-slate-800 hover:text-slate-100 flex items-center justify-center"
+                              title="Download PDF Report"
                             >
-                              View Details
+                              {downloadingPdfId === latestScan.id ? (
+                                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                              ) : (
+                                <Download className="h-3.5 w-3.5" />
+                              )}
                             </Button>
-                          </Link>
+
+                            <Link to={`/dashboard/sites/${site.id}`}>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="h-8 text-xs border-slate-800 text-slate-350 hover:bg-slate-800 hover:text-slate-100"
+                              >
+                                View Details
+                              </Button>
+                            </Link>
+                          </>
                         )}
 
                         <Button

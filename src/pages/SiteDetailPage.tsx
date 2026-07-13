@@ -23,10 +23,12 @@ import {
   Image as ImageIcon,
   Trophy,
   Activity,
-  ChevronRight
+  ChevronRight,
+  Download
 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import AnimatedNumber from '../components/AnimatedNumber'
+import { exportToPDF } from '../utils/pdfExport'
 
 interface ImageFlag {
   image_url: string
@@ -135,6 +137,8 @@ export default function SiteDetailPage() {
   const [activeTab, setActiveTab] = useState<'overview' | 'seo' | 'trust' | 'image' | 'history'>('overview')
   const [addressedSuggestions, setAddressedSuggestions] = useState<Record<string, string[]>>({})
   const [emailNotifications, setEmailNotifications] = useState(true)
+  const [downloadingPdf, setDownloadingPdf] = useState(false)
+  const [pdfError, setPdfError] = useState('')
 
   // Fetch site data & security verification
   const loadSiteAndScans = async () => {
@@ -250,6 +254,21 @@ export default function SiteDetailPage() {
       setScanError(err.message || 'Scanning process failed.')
     } finally {
       setScanning(false)
+    }
+  }
+
+  const handleDownloadPdf = async () => {
+    if (!site || !selectedScan) return
+    setDownloadingPdf(true)
+    setPdfError('')
+    try {
+      exportToPDF(site.nickname || site.url, site.url, selectedScan)
+    } catch (err: any) {
+      console.error('[SiteDoctor+] PDF generation error:', err)
+      setPdfError(err.message || 'Failed to export PDF report. Please try again.')
+      setTimeout(() => setPdfError(''), 5000)
+    } finally {
+      setDownloadingPdf(false)
     }
   }
 
@@ -450,10 +469,31 @@ export default function SiteDetailPage() {
                 </div>
 
                 <div className="flex items-center gap-3 shrink-0">
+                  {selectedScan && (
+                    <Button
+                      onClick={handleDownloadPdf}
+                      disabled={downloadingPdf}
+                      variant="outline"
+                      className="border-slate-800 text-slate-300 hover:bg-slate-900 flex items-center gap-1.5 h-10 text-xs"
+                    >
+                      {downloadingPdf ? (
+                        <>
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                          Generating...
+                        </>
+                      ) : (
+                        <>
+                          <Download className="h-4 w-4" />
+                          Download PDF
+                        </>
+                      )}
+                    </Button>
+                  )}
+
                   <Button
                     onClick={handleScan}
                     disabled={scanning}
-                    className="bg-emerald-500 text-slate-950 font-bold hover:bg-emerald-400 flex items-center gap-1.5 shadow-md shadow-emerald-500/10"
+                    className="bg-emerald-500 text-slate-950 font-bold hover:bg-emerald-400 flex items-center gap-1.5 shadow-md shadow-emerald-500/10 h-10"
                   >
                     {scanning ? (
                       <>
@@ -472,6 +512,13 @@ export default function SiteDetailPage() {
                   </Button>
                 </div>
               </div>
+
+              {pdfError && (
+                <div className="p-3 bg-red-950/30 border border-red-500/20 rounded-xl text-xs text-red-400 flex items-start gap-2">
+                  <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
+                  <span>{pdfError}</span>
+                </div>
+              )}
 
               {scanError && (
                 <div className="p-3 bg-red-950/30 border border-red-500/20 rounded-xl text-xs text-red-400 flex items-start gap-2">
