@@ -228,7 +228,21 @@ For any category with status "Needs Improvement" or "Critical", or any Trust fla
 If the trust flag is "Potential AI-Generated Content", you MUST also include:
 - "excerpt": the exact sentence or phrase (1-2 sentences max) from the scraped body text that triggered the flag.
 - "reasoning": why this specific text seems AI-generated (e.g. "generic phrasing with no specific details", "repetitive sentence structure").
-For other flags, set "excerpt" and "reasoning" to null.
+- For other flags, set "excerpt" and "reasoning" to null.
+
+Calculate three trust sub-scores (0-100 each):
+- "topical_relevance": how aligned the content is with the domain topic (0-100).
+- "subject_expertise": how authoritative, clear, and expert the writing tone is (0-100).
+- "credibility": how trustworthy, factually secure, and free of deception the copy is (0-100).
+The overall trust_score MUST be the mathematical average of these three sub-scores.
+
+Calculate a content freshness score (0-100) based on copyright year, date references, and currency of the writing, and output positive signals list (e.g. "Recent copyright notice found", "Timestamps detected").
+
+Extract 5-8 top keywords/phrases with frequency and check if present in title, description, or headings.
+
+Provide 1-3 quick wins (fastest, easiest fixes the user could do right now, e.g. adding a favicon or meta description, separate from full suggestions).
+
+Provide business context about the domain.
 
 {
   "seo_score": 85,
@@ -291,9 +305,44 @@ For other flags, set "excerpt" and "reasoning" to null.
     }
   ],
   "trust_score": 75,
+  "trust_sub_scores": {
+    "topical_relevance": 80,
+    "subject_expertise": 70,
+    "credibility": 75
+  },
+  "content_freshness": {
+    "score": 90,
+    "positive_signals": ["Recent 2026 copyright notice found", "Timestamps detected in text"]
+  },
+  "business_context": {
+    "what_is_this_domain_about": "A professional AI-powered website auditor and SEO trust scanning tool.",
+    "industry_niche": "SaaS / SEO Audit / web credibility",
+    "target_audience": "Webmasters, website owners, and marketing professionals."
+  },
+  "content_strengths": [
+    "Clear structure and well-defined headings",
+    "Original and engaging introduction text"
+  ],
+  "content_weaknesses": [
+    "Some images lack alt descriptions",
+    "Limited depth on pricing information"
+  ],
+  "quick_wins": [
+    "Add a canonical tag to the home page.",
+    "Add descriptive alt text to the hero banner image."
+  ],
+  "top_keywords": [
+    {
+      "keyword": "seo audit",
+      "frequency": 8,
+      "in_title": true,
+      "in_meta": true,
+      "in_headings": true
+    }
+  ],
   "trust_flags": [
     { 
-      "flag": "Title of the credibility flag (e.g., 'Potential AI-Generated Content')", 
+      "flag": "Potential AI-Generated Content", 
       "explanation": "Why this flag was raised, e.g. lack of author bio, copy reads like generic AI text",
       "priority": "Medium",
       "excerpt": "Specific sentence or phrase from the body text that triggered the flag (1-2 sentences max) or null.",
@@ -505,7 +554,14 @@ For other flags, set "excerpt" and "reasoning" to null.
 
     // Calculate combined score
     const seoScore = parsedAudit.seo_score || 0;
-    const trustScore = parsedAudit.trust_score || 0;
+    
+    // overall trust_score becomes the average of topical_relevance, subject_expertise, and credibility
+    let trustScore = parsedAudit.trust_score || 0;
+    if (parsedAudit.trust_sub_scores) {
+      const sub = parsedAudit.trust_sub_scores;
+      const totalSub = (sub.topical_relevance || 0) + (sub.subject_expertise || 0) + (sub.credibility || 0);
+      trustScore = Math.round(totalSub / 3);
+    }
     const combinedScore = Math.round((seoScore * 0.4) + (trustScore * 0.6));
 
     const finalResult = {
@@ -514,9 +570,16 @@ For other flags, set "excerpt" and "reasoning" to null.
       combined_score: combinedScore,
       seo_report: {
         categories: parsedAudit.seo_categories || [],
+        quick_wins: parsedAudit.quick_wins || [],
+        top_keywords: parsedAudit.top_keywords || [],
       },
       trust_report: {
         flags: parsedAudit.trust_flags || [],
+        business_context: parsedAudit.business_context || null,
+        content_strengths: parsedAudit.content_strengths || [],
+        content_weaknesses: parsedAudit.content_weaknesses || [],
+        trust_sub_scores: parsedAudit.trust_sub_scores || null,
+        content_freshness: parsedAudit.content_freshness || null,
       },
       image_flags: imageFlags,
     };

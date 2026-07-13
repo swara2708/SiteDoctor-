@@ -22,6 +22,8 @@ interface Scan {
       fix_suggestion: string
       priority?: string
     }>
+    quick_wins?: string[]
+    top_keywords?: Array<{ keyword: string; frequency: number; relevance: string }>
   } | null
   trust_report: {
     flags?: Array<{
@@ -31,6 +33,24 @@ interface Scan {
       excerpt?: string | null
       reasoning?: string | null
     }>
+    business_context?: {
+      what_is_this_domain_about?: string
+      industry_niche?: string
+      target_audience?: string
+      content_tone?: string
+    } | null
+    content_strengths?: string[]
+    content_weaknesses?: string[]
+    trust_sub_scores?: {
+      topical_relevance?: number
+      subject_expertise?: number
+      credibility?: number
+    } | null
+    content_freshness?: {
+      score?: number
+      assessment?: string
+      signals?: string[]
+    } | null
   } | null
   image_flags: ImageFlag[] | null
   scanned_at: string
@@ -373,9 +393,185 @@ export function exportToPDF(siteName: string, url: string, scan: Scan) {
       
       y += 14;
     });
+    drawSeparator();
   }
 
-  // 7. FOOTERS & PAGE NUMBERS (Draw globally on all pages)
+  // 7. BUSINESS CONTEXT
+  const ctx = scan.trust_report?.business_context;
+  if (ctx?.what_is_this_domain_about) {
+    writeWrappedText('Domain Business Context', 13, 'bold', [15, 23, 42], 12);
+    writeWrappedText(ctx.what_is_this_domain_about, 9, 'normal', [71, 85, 105], 13);
+    const tags = [ctx.industry_niche, ctx.target_audience, ctx.content_tone].filter(Boolean) as string[];
+    if (tags.length > 0) {
+      y += 4;
+      doc.setFont('Helvetica', 'bold');
+      doc.setFontSize(8.5);
+      doc.setTextColor(13, 148, 136);
+      doc.text(tags.join('  ·  '), margin, y);
+      y += 16;
+    }
+    drawSeparator();
+  }
+
+  // 8. TRUST SUB-METRICS
+  const sub = scan.trust_report?.trust_sub_scores;
+  if (sub) {
+    checkPageBreak(80);
+    writeWrappedText('Trust Sub-Metrics', 13, 'bold', [15, 23, 42], 10);
+    const subMetrics = [
+      { label: 'Topical Relevance', value: sub.topical_relevance || 0, color: [16, 185, 129] as [number, number, number] },
+      { label: 'Subject Expertise',  value: sub.subject_expertise || 0, color: [59, 130, 246] as [number, number, number] },
+      { label: 'Credibility',         value: sub.credibility || 0,      color: [245, 158, 11] as [number, number, number] },
+    ];
+    subMetrics.forEach(m => {
+      checkPageBreak(24);
+      doc.setFont('Helvetica', 'bold');
+      doc.setFontSize(9);
+      doc.setTextColor(71, 85, 105);
+      doc.text(m.label, margin, y);
+      doc.setTextColor(15, 23, 42);
+      doc.text(`${m.value}/100`, margin + contentWidth, y, { align: 'right' });
+      y += 11;
+      // Bar track
+      doc.setFillColor(226, 232, 240);
+      doc.rect(margin, y, contentWidth, 5, 'F');
+      // Bar fill
+      doc.setFillColor(m.color[0], m.color[1], m.color[2]);
+      doc.rect(margin, y, (m.value / 100) * contentWidth, 5, 'F');
+      y += 12;
+    });
+    drawSeparator();
+  }
+
+  // 9. CONTENT FRESHNESS
+  const freshness = scan.trust_report?.content_freshness;
+  if (freshness) {
+    checkPageBreak(60);
+    writeWrappedText('Content Freshness', 13, 'bold', [15, 23, 42], 8);
+    const fScore = freshness.score || 0;
+    const fColor: [number, number, number] = fScore >= 70 ? [16, 185, 129] : fScore >= 40 ? [245, 158, 11] : [239, 68, 68];
+    doc.setFont('Helvetica', 'bold');
+    doc.setFontSize(22);
+    doc.setTextColor(fColor[0], fColor[1], fColor[2]);
+    doc.text(`${fScore}`, margin, y);
+    doc.setFont('Helvetica', 'normal');
+    doc.setFontSize(9);
+    doc.setTextColor(100, 116, 139);
+    doc.text('/ 100', margin + 28, y);
+    y += 14;
+    if (freshness.assessment) {
+      writeWrappedText(freshness.assessment, 9, 'normal', [71, 85, 105], 12);
+    }
+    (freshness.signals || []).forEach(sig => {
+      checkPageBreak(14);
+      doc.setFont('Helvetica', 'normal');
+      doc.setFontSize(8.5);
+      doc.setTextColor(71, 85, 105);
+      doc.text(`• ${sig}`, margin + 8, y);
+      y += 12;
+    });
+    drawSeparator();
+  }
+
+  // 10. CONTENT STRENGTHS & WEAKNESSES
+  const strengths = scan.trust_report?.content_strengths || [];
+  const weaknesses = scan.trust_report?.content_weaknesses || [];
+  if (strengths.length > 0 || weaknesses.length > 0) {
+    checkPageBreak(50);
+    writeWrappedText('Content Strengths & Weaknesses', 13, 'bold', [15, 23, 42], 10);
+    if (strengths.length > 0) {
+      doc.setFont('Helvetica', 'bold');
+      doc.setFontSize(9);
+      doc.setTextColor(16, 185, 129);
+      doc.text('Strengths', margin, y);
+      y += 12;
+      strengths.forEach(s => {
+        checkPageBreak(14);
+        doc.setFont('Helvetica', 'normal');
+        doc.setFontSize(9);
+        doc.setTextColor(71, 85, 105);
+        const lines = doc.splitTextToSize(`✓  ${s}`, contentWidth - 10);
+        doc.text(lines, margin + 8, y);
+        y += lines.length * 11 + 2;
+      });
+      y += 4;
+    }
+    if (weaknesses.length > 0) {
+      doc.setFont('Helvetica', 'bold');
+      doc.setFontSize(9);
+      doc.setTextColor(239, 68, 68);
+      doc.text('Weaknesses', margin, y);
+      y += 12;
+      weaknesses.forEach(w => {
+        checkPageBreak(14);
+        doc.setFont('Helvetica', 'normal');
+        doc.setFontSize(9);
+        doc.setTextColor(71, 85, 105);
+        const lines = doc.splitTextToSize(`✗  ${w}`, contentWidth - 10);
+        doc.text(lines, margin + 8, y);
+        y += lines.length * 11 + 2;
+      });
+    }
+    drawSeparator();
+  }
+
+  // 11. QUICK WINS
+  const quickWins = scan.seo_report?.quick_wins || [];
+  if (quickWins.length > 0) {
+    checkPageBreak(50);
+    writeWrappedText('Quick Wins', 13, 'bold', [15, 23, 42], 10);
+    quickWins.forEach((win, i) => {
+      checkPageBreak(20);
+      doc.setFont('Helvetica', 'normal');
+      doc.setFontSize(9);
+      doc.setTextColor(71, 85, 105);
+      const lines = doc.splitTextToSize(`${i + 1}. ${win}`, contentWidth - 10);
+      doc.text(lines, margin + 8, y);
+      y += lines.length * 11 + 4;
+    });
+    drawSeparator();
+  }
+
+  // 12. TOP KEYWORDS
+  const keywords = scan.seo_report?.top_keywords || [];
+  if (keywords.length > 0) {
+    checkPageBreak(60);
+    writeWrappedText('Top Keywords', 13, 'bold', [15, 23, 42], 10);
+    // Table header
+    doc.setFont('Helvetica', 'bold');
+    doc.setFontSize(8);
+    doc.setTextColor(100, 116, 139);
+    doc.text('#', margin, y);
+    doc.text('Keyword', margin + 20, y);
+    doc.text('Freq', margin + 250, y);
+    doc.text('Relevance', margin + 340, y);
+    y += 10;
+    doc.setDrawColor(226, 232, 240);
+    doc.line(margin, y, margin + contentWidth, y);
+    y += 8;
+    keywords.forEach((kw, i) => {
+      checkPageBreak(16);
+      doc.setFont('Helvetica', 'normal');
+      doc.setFontSize(8.5);
+      doc.setTextColor(71, 85, 105);
+      doc.text(`${i + 1}`, margin, y);
+      doc.setTextColor(30, 41, 59);
+      doc.setFont('Helvetica', 'bold');
+      doc.text(kw.keyword, margin + 20, y);
+      doc.setFont('Helvetica', 'normal');
+      doc.setTextColor(71, 85, 105);
+      doc.text(`${kw.frequency}x`, margin + 250, y);
+      const relColor: [number, number, number] =
+        kw.relevance?.toLowerCase() === 'high' ? [16, 185, 129] :
+        kw.relevance?.toLowerCase() === 'medium' ? [245, 158, 11] : [100, 116, 139];
+      doc.setTextColor(relColor[0], relColor[1], relColor[2]);
+      doc.text(kw.relevance || 'Low', margin + 340, y);
+      y += 14;
+    });
+    drawSeparator();
+  }
+
+  // 13. FOOTERS & PAGE NUMBERS (Draw globally on all pages)
   const totalPages = doc.getNumberOfPages();
   for (let i = 1; i <= totalPages; i++) {
     doc.setPage(i);

@@ -24,7 +24,16 @@ import {
   Trophy,
   Activity,
   ChevronRight,
-  Download
+  Download,
+  Monitor,
+  Zap,
+  Search,
+  BarChart2,
+  Globe,
+  Users,
+  Star,
+  TrendingUp,
+  Clock
 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import AnimatedNumber from '../components/AnimatedNumber'
@@ -527,13 +536,52 @@ export default function SiteDetailPage() {
                 </div>
               )}
 
-              {/* RINGS */}
+              {/* RINGS + SCORE SUMMARY BAR */}
               {selectedScan && !scanning && (
-                <div className="grid grid-cols-3 gap-4">
-                  <ProgressRing value={selectedScan.seo_score || 0} label="SEO score" type="seo" />
-                  <ProgressRing value={selectedScan.trust_score || 0} label="Trust Score" type="trust" />
-                  <ProgressRing value={selectedScan.combined_score || 0} label="Site Health Index" type="combined" />
-                </div>
+                <>
+                  <div className="grid grid-cols-3 gap-4">
+                    <ProgressRing value={selectedScan.seo_score || 0} label="SEO score" type="seo" />
+                    <ProgressRing value={selectedScan.trust_score || 0} label="Trust Score" type="trust" />
+                    <ProgressRing value={selectedScan.combined_score || 0} label="Site Health Index" type="combined" />
+                  </div>
+
+                  {/* Score Summary Bar */}
+                  {(() => {
+                    const cats = selectedScan.seo_report?.categories || []
+                    const passed = cats.filter((c: any) => c.status?.toLowerCase() === 'good').length
+                    const warnings = cats.filter((c: any) => c.status?.toLowerCase() === 'needs improvement').length
+                    const failed = cats.filter((c: any) => c.status?.toLowerCase() === 'critical').length
+                    if (cats.length === 0) return null
+                    return (
+                      <div className="flex items-center gap-3 bg-[#0b0f19] border border-slate-900/80 rounded-2xl px-5 py-3">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 mr-1">Audit Summary</span>
+                        <div className="flex items-center gap-1.5">
+                          <span className="h-2 w-2 rounded-full bg-emerald-400"></span>
+                          <span className="text-xs font-bold text-emerald-400">{passed}</span>
+                          <span className="text-[10px] text-slate-500">Passed</span>
+                        </div>
+                        <div className="h-3 w-px bg-slate-800" />
+                        <div className="flex items-center gap-1.5">
+                          <span className="h-2 w-2 rounded-full bg-amber-400"></span>
+                          <span className="text-xs font-bold text-amber-400">{warnings}</span>
+                          <span className="text-[10px] text-slate-500">Warnings</span>
+                        </div>
+                        <div className="h-3 w-px bg-slate-800" />
+                        <div className="flex items-center gap-1.5">
+                          <span className="h-2 w-2 rounded-full bg-red-400"></span>
+                          <span className="text-xs font-bold text-red-400">{failed}</span>
+                          <span className="text-[10px] text-slate-500">Failed</span>
+                        </div>
+                        {/* Proportional bar */}
+                        <div className="flex-1 flex h-1.5 rounded-full overflow-hidden bg-slate-900 ml-2">
+                          {passed > 0 && <div className="bg-emerald-500 h-full" style={{ width: `${(passed/cats.length)*100}%` }} />}
+                          {warnings > 0 && <div className="bg-amber-500 h-full" style={{ width: `${(warnings/cats.length)*100}%` }} />}
+                          {failed > 0 && <div className="bg-red-500 h-full" style={{ width: `${(failed/cats.length)*100}%` }} />}
+                        </div>
+                      </div>
+                    )
+                  })()}
+                </>
               )}
 
               {scanning && (
@@ -556,7 +604,7 @@ export default function SiteDetailPage() {
                       { id: 'seo', label: 'SEO Report' },
                       { id: 'trust', label: 'Trust Report' },
                       { id: 'image', label: 'Image Analysis' },
-                      { id: 'history', label: 'Scan History' }
+                      { id: 'history', label: 'Scan History' },
                     ].map((tab) => {
                       const isActive = activeTab === tab.id
                       return (
@@ -592,6 +640,7 @@ export default function SiteDetailPage() {
                           transition={{ duration: 0.2 }}
                           className="space-y-4"
                         >
+                          {/* ACTIONABLE IMPROVEMENT TASKS */}
                           <Card className="bg-slate-900/20 border-slate-900 text-slate-200">
                             <CardHeader className="pb-4">
                               <CardTitle className="text-sm font-bold flex items-center justify-between">
@@ -695,6 +744,33 @@ export default function SiteDetailPage() {
                               )}
                             </div>
                           </Card>
+
+                          {/* QUICK WINS CHECKLIST */}
+                          {(() => {
+                            const quickWins: string[] = selectedScan.seo_report?.quick_wins || []
+                            if (quickWins.length === 0) return null
+                            return (
+                              <Card className="bg-slate-900/20 border-slate-900 text-slate-200">
+                                <CardHeader className="pb-3">
+                                  <CardTitle className="text-sm font-bold flex items-center gap-1.5">
+                                    <Zap className="h-4 w-4 text-amber-400" />
+                                    Quick Wins
+                                  </CardTitle>
+                                  <CardDescription className="text-slate-500">
+                                    Low-effort, high-impact improvements you can ship today.
+                                  </CardDescription>
+                                </CardHeader>
+                                <div className="p-6 pt-0 space-y-2">
+                                  {quickWins.map((win, idx) => (
+                                    <div key={idx} className="flex items-start gap-2.5 bg-[#141b2b] border border-slate-900/80 rounded-lg px-3 py-2.5">
+                                      <Zap className="h-3.5 w-3.5 text-amber-400 shrink-0 mt-0.5" />
+                                      <span className="text-xs text-slate-300 leading-relaxed">{win}</span>
+                                    </div>
+                                  ))}
+                                </div>
+                              </Card>
+                            )
+                          })()}
                         </motion.div>
                       )}
 
@@ -705,48 +781,153 @@ export default function SiteDetailPage() {
                           animate={{ opacity: 1, y: 0 }}
                           exit={{ opacity: 0, y: -10 }}
                           transition={{ duration: 0.2 }}
-                          className="grid grid-cols-1 md:grid-cols-2 gap-4"
+                          className="space-y-4"
                         >
+                          {/* GOOGLE SEARCH PREVIEW */}
                           {(() => {
-                            const rawCategories = selectedScan.seo_report?.categories || []
-                            const categories = imgStats.total === 0 
-                              ? rawCategories.filter((cat: any) => cat.category_name !== 'Image Alt Text')
-                              : rawCategories
+                            // Extract meta info from first SEO category if meta category exists, or read from raw
+                            const metaCat = (selectedScan.seo_report?.categories || []).find((c: any) =>
+                              c.category_name?.toLowerCase().includes('meta')
+                            )
+                            const rawTitle = metaCat?.detected_title || site?.nickname || site?.url || 'Page Title'
+                            const rawDesc = metaCat?.detected_description || metaCat?.explanation || 'No meta description detected for this page.'
+                            const pageUrl = site?.url || ''
+                            const displayUrl = pageUrl.replace(/^https?:\/\//, '').replace(/\/$/, '')
 
-                            if (categories.length === 0) {
-                              return (
-                                <p className="text-xs text-slate-500 italic text-center col-span-2 py-8">
-                                  No detailed categories available.
-                                </p>
-                              )
-                            }
+                            const DESKTOP_TITLE_MAX = 600 // pixels ~60 chars
+                            const MOBILE_TITLE_MAX = 55 // chars
+                            const DESKTOP_DESC_MAX = 155
+                            const MOBILE_DESC_MAX = 105
 
-                            return categories.map((cat: any) => (
-                              <Card key={cat.category_name} className="bg-[#0b0f19] border-slate-900/80 text-slate-200 hover:-translate-y-0.5 transition-all duration-300">
-                                <CardHeader className="p-4 space-y-3">
-                                  <div className="flex items-center justify-between gap-2">
-                                    <div className="flex items-center gap-2">
-                                      {getCategoryIcon(cat.category_name)}
-                                      <span className="text-xs font-bold text-slate-200">{cat.category_name}</span>
-                                    </div>
-                                    <span className={`px-2 py-0.2 rounded border text-[9px] font-extrabold uppercase tracking-wide ${getStatusStyles(cat.status)}`}>
-                                      {cat.status}
-                                    </span>
+                            const truncate = (str: string, max: number) =>
+                              str.length > max ? str.slice(0, max) + '…' : str
+
+                            return (
+                              <Card className="bg-[#0b0f19] border-slate-900/80 text-slate-200">
+                                <CardHeader className="p-4 pb-3">
+                                  <div className="flex items-center justify-between">
+                                    <CardTitle className="text-sm font-bold flex items-center gap-1.5">
+                                      <Search className="h-4 w-4 text-slate-400" />
+                                      Google Search Results Preview
+                                    </CardTitle>
+                                    <GooglePreviewToggle />
                                   </div>
-                                  
-                                  <p className="text-xs text-slate-400 leading-normal">
-                                    {cat.explanation}
-                                  </p>
-                                  
-                                  {cat.fix_suggestion && cat.fix_suggestion !== 'None required.' && (
-                                    <div className="bg-[#141b2b] border border-slate-800/80 rounded-lg p-2.5 text-xs text-slate-355">
-                                      <span className="font-semibold text-[9px] text-amber-400/80 uppercase tracking-wider block mb-0.5">Recommended Fix</span>
-                                      {cat.fix_suggestion}
-                                    </div>
-                                  )}
+                                  <CardDescription className="text-slate-500">
+                                    Simulates how this page appears in Google search results.
+                                  </CardDescription>
                                 </CardHeader>
+                                <div className="px-4 pb-5">
+                                  <GooglePreviewPanel
+                                    title={rawTitle}
+                                    description={rawDesc}
+                                    displayUrl={displayUrl}
+                                    url={pageUrl}
+                                    truncate={truncate}
+                                    desktopTitleMax={DESKTOP_TITLE_MAX}
+                                    desktopDescMax={DESKTOP_DESC_MAX}
+                                    mobileTitleMax={MOBILE_TITLE_MAX}
+                                    mobileDescMax={MOBILE_DESC_MAX}
+                                  />
+                                </div>
                               </Card>
-                            ))
+                            )
+                          })()}
+
+                          {/* SEO CATEGORY CARDS */}
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {(() => {
+                              const rawCategories = selectedScan.seo_report?.categories || []
+                              const categories = imgStats.total === 0 
+                                ? rawCategories.filter((cat: any) => cat.category_name !== 'Image Alt Text')
+                                : rawCategories
+
+                              if (categories.length === 0) {
+                                return (
+                                  <p className="text-xs text-slate-500 italic text-center col-span-2 py-8">
+                                    No detailed categories available.
+                                  </p>
+                                )
+                              }
+
+                              return categories.map((cat: any) => (
+                                <Card key={cat.category_name} className="bg-[#0b0f19] border-slate-900/80 text-slate-200 hover:-translate-y-0.5 transition-all duration-300">
+                                  <CardHeader className="p-4 space-y-3">
+                                    <div className="flex items-center justify-between gap-2">
+                                      <div className="flex items-center gap-2">
+                                        {getCategoryIcon(cat.category_name)}
+                                        <span className="text-xs font-bold text-slate-200">{cat.category_name}</span>
+                                      </div>
+                                      <span className={`px-2 py-0.2 rounded border text-[9px] font-extrabold uppercase tracking-wide ${getStatusStyles(cat.status)}`}>
+                                        {cat.status}
+                                      </span>
+                                    </div>
+                                    
+                                    <p className="text-xs text-slate-400 leading-normal">
+                                      {cat.explanation}
+                                    </p>
+                                    
+                                    {cat.fix_suggestion && cat.fix_suggestion !== 'None required.' && (
+                                      <div className="bg-[#141b2b] border border-slate-800/80 rounded-lg p-2.5 text-xs text-slate-355">
+                                        <span className="font-semibold text-[9px] text-amber-400/80 uppercase tracking-wider block mb-0.5">Recommended Fix</span>
+                                        {cat.fix_suggestion}
+                                      </div>
+                                    )}
+                                  </CardHeader>
+                                </Card>
+                              ))
+                            })()}
+                          </div>
+
+                          {/* KEYWORD EXTRACTION TABLE */}
+                          {(() => {
+                            const keywords: Array<{ keyword: string; frequency: number; relevance: string }> =
+                              selectedScan.seo_report?.top_keywords || []
+                            if (keywords.length === 0) return null
+                            return (
+                              <Card className="bg-[#0b0f19] border-slate-900/80 text-slate-200">
+                                <CardHeader className="p-4 pb-3">
+                                  <CardTitle className="text-sm font-bold flex items-center gap-1.5">
+                                    <BarChart2 className="h-4 w-4 text-emerald-400" />
+                                    Top Keywords Detected
+                                  </CardTitle>
+                                  <CardDescription className="text-slate-500">
+                                    Most prominent terms extracted from the page content.
+                                  </CardDescription>
+                                </CardHeader>
+                                <div className="px-4 pb-4 overflow-x-auto">
+                                  <table className="w-full text-xs text-left border-collapse">
+                                    <thead>
+                                      <tr className="border-b border-slate-900 text-slate-400 font-bold uppercase tracking-wider text-[9px]">
+                                        <th className="py-2 pr-4">#</th>
+                                        <th className="py-2 pr-4">Keyword</th>
+                                        <th className="py-2 pr-4 text-center">Frequency</th>
+                                        <th className="py-2">Relevance</th>
+                                      </tr>
+                                    </thead>
+                                    <tbody>
+                                      {keywords.map((kw, i) => (
+                                        <tr key={i} className="border-b border-slate-900/60 hover:bg-[#141b2b]/50 transition-colors">
+                                          <td className="py-2 pr-4 text-slate-600 font-mono">{i + 1}</td>
+                                          <td className="py-2 pr-4 font-semibold text-slate-200">{kw.keyword}</td>
+                                          <td className="py-2 pr-4 text-center">
+                                            <span className="bg-slate-900 text-slate-300 px-2 py-0.5 rounded font-mono">{kw.frequency}x</span>
+                                          </td>
+                                          <td className="py-2">
+                                            <span className={`text-[9px] uppercase tracking-wider font-extrabold px-1.5 py-0.5 rounded border ${
+                                              kw.relevance?.toLowerCase() === 'high'
+                                                ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+                                                : kw.relevance?.toLowerCase() === 'medium'
+                                                ? 'bg-amber-500/10 text-amber-400 border-amber-500/20'
+                                                : 'bg-slate-800 text-slate-400 border-slate-700'
+                                            }`}>{kw.relevance || 'Low'}</span>
+                                          </td>
+                                        </tr>
+                                      ))}
+                                    </tbody>
+                                  </table>
+                                </div>
+                              </Card>
+                            )
                           })()}
                         </motion.div>
                       )}
@@ -760,6 +941,189 @@ export default function SiteDetailPage() {
                           transition={{ duration: 0.2 }}
                           className="space-y-4"
                         >
+                          {/* DOMAIN BUSINESS CONTEXT */}
+                          {(() => {
+                            const ctx = selectedScan.trust_report?.business_context
+                            if (!ctx) return null
+                            return (
+                              <Card className="bg-[#0b0f19] border-slate-900/80 text-slate-200">
+                                <CardHeader className="p-4 pb-3">
+                                  <CardTitle className="text-sm font-bold flex items-center gap-1.5">
+                                    <Globe className="h-4 w-4 text-emerald-400" />
+                                    About This Site
+                                  </CardTitle>
+                                </CardHeader>
+                                <div className="px-4 pb-4 space-y-3">
+                                  {ctx.what_is_this_domain_about && (
+                                    <p className="text-xs text-slate-300 leading-relaxed">{ctx.what_is_this_domain_about}</p>
+                                  )}
+                                  <div className="flex flex-wrap gap-2">
+                                    {ctx.industry_niche && (
+                                      <span className="flex items-center gap-1.5 text-[10px] font-semibold bg-slate-900 border border-slate-800 rounded-full px-3 py-1 text-slate-300">
+                                        <BarChart2 className="h-3 w-3 text-emerald-400" />
+                                        {ctx.industry_niche}
+                                      </span>
+                                    )}
+                                    {ctx.target_audience && (
+                                      <span className="flex items-center gap-1.5 text-[10px] font-semibold bg-slate-900 border border-slate-800 rounded-full px-3 py-1 text-slate-300">
+                                        <Users className="h-3 w-3 text-amber-400" />
+                                        {ctx.target_audience}
+                                      </span>
+                                    )}
+                                    {ctx.content_tone && (
+                                      <span className="flex items-center gap-1.5 text-[10px] font-semibold bg-slate-900 border border-slate-800 rounded-full px-3 py-1 text-slate-300">
+                                        <FileText className="h-3 w-3 text-blue-400" />
+                                        {ctx.content_tone}
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+                              </Card>
+                            )
+                          })()}
+
+                          {/* TRUST SUB-METRICS */}
+                          {(() => {
+                            const sub = selectedScan.trust_report?.trust_sub_scores
+                            if (!sub) return null
+                            const metrics = [
+                              { label: 'Topical Relevance', value: sub.topical_relevance || 0, color: 'bg-emerald-500' },
+                              { label: 'Subject Expertise', value: sub.subject_expertise || 0, color: 'bg-blue-500' },
+                              { label: 'Credibility', value: sub.credibility || 0, color: 'bg-amber-500' },
+                            ]
+                            return (
+                              <Card className="bg-[#0b0f19] border-slate-900/80 text-slate-200">
+                                <CardHeader className="p-4 pb-3">
+                                  <CardTitle className="text-sm font-bold flex items-center gap-1.5">
+                                    <Star className="h-4 w-4 text-amber-400" />
+                                    Trust Sub-Metrics
+                                  </CardTitle>
+                                  <CardDescription className="text-slate-500">Granular breakdown of the trust score components.</CardDescription>
+                                </CardHeader>
+                                <div className="px-4 pb-4 space-y-3">
+                                  {metrics.map((m) => (
+                                    <div key={m.label}>
+                                      <div className="flex justify-between text-xs mb-1.5">
+                                        <span className="text-slate-400 font-semibold">{m.label}</span>
+                                        <span className="text-slate-200 font-bold font-mono">{m.value}<span className="text-slate-500">/100</span></span>
+                                      </div>
+                                      <div className="w-full h-2 bg-slate-900 rounded-full overflow-hidden">
+                                        <motion.div
+                                          className={`h-full rounded-full ${m.color}`}
+                                          initial={{ width: 0 }}
+                                          animate={{ width: `${m.value}%` }}
+                                          transition={{ duration: 0.8, ease: 'easeOut' }}
+                                        />
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              </Card>
+                            )
+                          })()}
+
+                          {/* CONTENT FRESHNESS */}
+                          {(() => {
+                            const freshness = selectedScan.trust_report?.content_freshness
+                            if (!freshness) return null
+                            const score = freshness.score || 0
+                            const radius = 36
+                            const circ = 2 * Math.PI * radius
+                            const offset = circ - (score / 100) * circ
+                            const scoreColor = score >= 70 ? '#10b981' : score >= 40 ? '#f59e0b' : '#ef4444'
+                            const signals: string[] = freshness.signals || []
+                            return (
+                              <Card className="bg-[#0b0f19] border-slate-900/80 text-slate-200">
+                                <CardHeader className="p-4 pb-3">
+                                  <CardTitle className="text-sm font-bold flex items-center gap-1.5">
+                                    <Clock className="h-4 w-4 text-slate-400" />
+                                    Content Freshness
+                                  </CardTitle>
+                                </CardHeader>
+                                <div className="px-4 pb-4 flex items-start gap-6">
+                                  {/* Mini ring */}
+                                  <div className="relative shrink-0">
+                                    <svg width="90" height="90" className="-rotate-90">
+                                      <circle cx="45" cy="45" r={radius} stroke="#1e293b" strokeWidth="8" fill="none" />
+                                      <motion.circle
+                                        cx="45" cy="45" r={radius}
+                                        stroke={scoreColor}
+                                        strokeWidth="8"
+                                        fill="none"
+                                        strokeDasharray={circ}
+                                        initial={{ strokeDashoffset: circ }}
+                                        animate={{ strokeDashoffset: offset }}
+                                        transition={{ duration: 0.9, ease: 'easeOut' }}
+                                        strokeLinecap="round"
+                                      />
+                                    </svg>
+                                    <span className="absolute inset-0 flex items-center justify-center text-sm font-extrabold" style={{ color: scoreColor }}>{score}</span>
+                                  </div>
+                                  <div className="space-y-2 flex-1">
+                                    <p className="text-xs text-slate-400 leading-relaxed">{freshness.assessment || ''}</p>
+                                    {signals.length > 0 && (
+                                      <div className="space-y-1.5">
+                                        <span className="text-[9px] uppercase font-bold tracking-wider text-slate-500">Signals Detected</span>
+                                        {signals.map((sig, i) => (
+                                          <div key={i} className="flex items-start gap-1.5">
+                                            <TrendingUp className="h-3 w-3 text-emerald-400 shrink-0 mt-0.5" />
+                                            <span className="text-[11px] text-slate-300">{sig}</span>
+                                          </div>
+                                        ))}
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                              </Card>
+                            )
+                          })()}
+
+                          {/* CONTENT STRENGTHS & WEAKNESSES */}
+                          {(() => {
+                            const strengths: string[] = selectedScan.trust_report?.content_strengths || []
+                            const weaknesses: string[] = selectedScan.trust_report?.content_weaknesses || []
+                            if (strengths.length === 0 && weaknesses.length === 0) return null
+                            return (
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                {strengths.length > 0 && (
+                                  <Card className="bg-[#0b0f19] border-emerald-500/10 text-slate-200">
+                                    <CardHeader className="p-4 pb-2">
+                                      <CardTitle className="text-xs font-bold flex items-center gap-1.5 text-emerald-400">
+                                        <Check className="h-3.5 w-3.5" /> Content Strengths
+                                      </CardTitle>
+                                    </CardHeader>
+                                    <div className="px-4 pb-4 space-y-2">
+                                      {strengths.map((s, i) => (
+                                        <div key={i} className="flex items-start gap-2">
+                                          <Check className="h-3 w-3 text-emerald-400 shrink-0 mt-0.5" />
+                                          <span className="text-xs text-slate-300 leading-relaxed">{s}</span>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </Card>
+                                )}
+                                {weaknesses.length > 0 && (
+                                  <Card className="bg-[#0b0f19] border-red-500/10 text-slate-200">
+                                    <CardHeader className="p-4 pb-2">
+                                      <CardTitle className="text-xs font-bold flex items-center gap-1.5 text-red-400">
+                                        <AlertTriangle className="h-3.5 w-3.5" /> Content Weaknesses
+                                      </CardTitle>
+                                    </CardHeader>
+                                    <div className="px-4 pb-4 space-y-2">
+                                      {weaknesses.map((w, i) => (
+                                        <div key={i} className="flex items-start gap-2">
+                                          <AlertTriangle className="h-3 w-3 text-red-400 shrink-0 mt-0.5" />
+                                          <span className="text-xs text-slate-300 leading-relaxed">{w}</span>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </Card>
+                                )}
+                              </div>
+                            )
+                          })()}
+
+                          {/* CREDIBILITY FLAGS */}
                           <Card className="bg-slate-900/20 border-slate-900 text-slate-200">
                             <CardHeader>
                               <CardTitle className="text-sm font-bold flex items-center gap-1.5">
@@ -978,5 +1342,89 @@ export default function SiteDetailPage() {
         </div>
       </main>
     </motion.div>
+  )
+}
+
+// ──────────────────────────────────────────────
+// Google Search Preview sub-components
+// ──────────────────────────────────────────────
+function GooglePreviewToggle() {
+  // Stateless UI — parent GooglePreviewPanel reads the toggle from a shared context approach.
+  // We lift the toggle state to the parent via a simple exported store-less approach: just render inline.
+  return null // toggle rendered inline inside GooglePreviewPanel
+}
+
+function GooglePreviewPanel({
+  title, description, displayUrl, url, truncate,
+  desktopTitleMax, desktopDescMax, mobileTitleMax, mobileDescMax
+}: {
+  title: string; description: string; displayUrl: string; url: string
+  truncate: (s: string, n: number) => string
+  desktopTitleMax: number; desktopDescMax: number; mobileTitleMax: number; mobileDescMax: number
+}) {
+  const [view, setView] = useState<'desktop' | 'mobile'>('desktop')
+
+  const dTitle = truncate(title, desktopTitleMax)
+  const dDesc = truncate(description, desktopDescMax)
+  const mTitle = truncate(title, mobileTitleMax)
+  const mDesc = truncate(description, mobileDescMax)
+
+  return (
+    <div className="space-y-3">
+      {/* Toggle */}
+      <div className="flex gap-1 bg-slate-950/60 rounded-lg p-1 w-fit">
+        <button
+          onClick={() => setView('desktop')}
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[11px] font-semibold transition-all ${
+            view === 'desktop' ? 'bg-slate-800 text-slate-200 shadow-sm' : 'text-slate-500 hover:text-slate-300'
+          }`}
+        >
+          <Monitor className="h-3 w-3" /> Desktop
+        </button>
+        <button
+          onClick={() => setView('mobile')}
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[11px] font-semibold transition-all ${
+            view === 'mobile' ? 'bg-slate-800 text-slate-200 shadow-sm' : 'text-slate-500 hover:text-slate-300'
+          }`}
+        >
+          <Smartphone className="h-3 w-3" /> Mobile
+        </button>
+      </div>
+
+      {/* Preview card */}
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={view}
+          initial={{ opacity: 0, y: 4 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -4 }}
+          transition={{ duration: 0.15 }}
+          className={`bg-white rounded-xl p-4 ${
+            view === 'mobile' ? 'max-w-xs' : 'max-w-lg'
+          }`}
+        >
+          {/* Favicon + breadcrumb */}
+          <div className="flex items-center gap-1.5 mb-1">
+            <div className="h-4 w-4 bg-slate-300 rounded-full flex items-center justify-center text-[8px] text-slate-600 font-bold">G</div>
+            <div>
+              <div className="text-[11px] text-gray-600 leading-none">{displayUrl}</div>
+              <div className="text-[9px] text-gray-500 leading-none">› ...</div>
+            </div>
+          </div>
+          {/* Title */}
+          <div className={`font-medium text-blue-700 hover:underline cursor-pointer leading-snug ${
+            view === 'mobile' ? 'text-sm' : 'text-base'
+          }`}>
+            {view === 'desktop' ? dTitle : mTitle}
+          </div>
+          {/* Description */}
+          <div className={`text-gray-600 leading-snug mt-0.5 ${
+            view === 'mobile' ? 'text-[11px]' : 'text-xs'
+          }`}>
+            {view === 'desktop' ? dDesc : mDesc}
+          </div>
+        </motion.div>
+      </AnimatePresence>
+    </div>
   )
 }

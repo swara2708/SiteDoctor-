@@ -566,54 +566,55 @@ export default function DashboardPage() {
                           />
                         </>
                       )}
-                    <CardHeader className="pb-4 relative z-20">
-                      <div className="flex items-start justify-between gap-4">
-                        <div className="truncate">
-                          <CardTitle className="text-lg font-bold text-slate-200 truncate" title={site.nickname || site.url}>
-                            {site.nickname || site.url}
-                          </CardTitle>
-                          {site.nickname && (
-                            <span className="text-xs text-slate-500 truncate block mt-0.5">{site.url}</span>
-                          )}
-                        </div>
-                        
-                        <div className="flex items-center gap-1 shrink-0">
-                          <Button 
-                            onClick={() => openEditModal(site)}
-                            variant="ghost" 
-                            size="icon" 
-                            className="h-8 w-8 text-slate-400 hover:text-amber-400 hover:bg-amber-500/10"
-                            disabled={isScanning}
-                            aria-label={`Edit Nickname for ${site.nickname || site.url}`}
-                          >
-                            <Edit2 className="h-4 w-4" aria-hidden="true" />
-                          </Button>
-                          <Button 
-                            onClick={() => openDeleteModal(site)}
-                            variant="ghost" 
-                            size="icon" 
-                            className="h-8 w-8 text-slate-400 hover:text-red-400 hover:bg-red-500/10"
-                            disabled={isScanning}
-                            aria-label={`Delete ${site.nickname || site.url}`}
-                          >
-                            <Trash2 className="h-4 w-4" aria-hidden="true" />
-                          </Button>
-                        </div>
-                      </div>
 
-                      {/* Display Score Rings if scan exists */}
-                      {latestScan && !isScanning && (
-                        <div className="grid grid-cols-3 gap-3 mt-4 pt-4 border-t border-slate-800/50">
-                          <ProgressRing value={latestScan.seo_score || 0} label="SEO" type="seo" />
-                          <ProgressRing value={latestScan.trust_score || 0} label="Trust" type="trust" />
-                          <ProgressRing value={latestScan.combined_score || 0} label="Index" type="combined" />
+                      <CardHeader className="pb-4 relative z-20">
+                        <div className="flex items-start justify-between gap-4">
+                          <div className="truncate">
+                            <CardTitle className="text-lg font-bold text-slate-200 truncate" title={site.nickname || site.url}>
+                              {site.nickname || site.url}
+                            </CardTitle>
+                            {site.nickname && (
+                              <span className="text-xs text-slate-500 truncate block mt-0.5">{site.url}</span>
+                            )}
+                          </div>
+                          
+                          <div className="flex items-center gap-1 shrink-0">
+                            <Button 
+                              onClick={() => openEditModal(site)}
+                              variant="ghost" 
+                              size="icon" 
+                              className="h-8 w-8 text-slate-400 hover:text-amber-400 hover:bg-amber-500/10"
+                              disabled={isScanning}
+                              aria-label={`Edit Nickname for ${site.nickname || site.url}`}
+                            >
+                              <Edit2 className="h-4 w-4" aria-hidden="true" />
+                            </Button>
+                            <Button 
+                              onClick={() => openDeleteModal(site)}
+                              variant="ghost" 
+                              size="icon" 
+                              className="h-8 w-8 text-slate-400 hover:text-red-400 hover:bg-red-500/10"
+                              disabled={isScanning}
+                              aria-label={`Delete ${site.nickname || site.url}`}
+                            >
+                              <Trash2 className="h-4 w-4" aria-hidden="true" />
+                            </Button>
+                          </div>
                         </div>
-                      )}
 
-                      {/* Trend Sparkline */}
-                      {latestScan && !isScanning && (
-                        <div className="mt-4 pt-3 border-t border-slate-800/40 flex items-center justify-between gap-4">
-                          <span className="text-[10px] uppercase font-bold tracking-wider text-slate-500">Trend</span>
+                        {/* Display Score Rings if scan exists */}
+                        {latestScan && !isScanning && (
+                          <div className="grid grid-cols-3 gap-3 mt-4 pt-4 border-t border-slate-800/50">
+                            <ProgressRing value={latestScan.seo_score || 0} label="SEO" type="seo" />
+                            <ProgressRing value={latestScan.trust_score || 0} label="Trust" type="trust" />
+                            <ProgressRing value={latestScan.combined_score || 0} label="Index" type="combined" />
+                          </div>
+                        )}
+
+                        {/* Trend Sparkline */}
+                        {latestScan && !isScanning && (
+                          <div className="mt-4 pt-3 border-t border-slate-800/40 flex items-center justify-between gap-4">
+                            <span className="text-[10px] uppercase font-bold tracking-wider text-slate-500">Trend</span>
                           {(() => {
                             const sparkData = getSparklineData(site)
                             if (!sparkData) {
