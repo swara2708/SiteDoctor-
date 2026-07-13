@@ -151,7 +151,7 @@ export default function LandingPage() {
               visible: { opacity: 1, y: 0, transition: { duration: 0.6, ease: "easeOut" } }
             }}
           >
-            Analyze and optimize your website's performance. SiteDoctor+ evaluates your web properties through a double-lens: auditing standard technical SEO vitals while validating content truthfulness, factual accuracy, and image credibility using state-of-the-art AI models.
+            Scan your website in seconds to fix standard technical SEO issues, check the factual accuracy of your copywriting, and flag stock or low-quality images. We help you build a fast, reliable web presence that search engines and real users actually trust.
           </motion.p>
 
           <motion.div 

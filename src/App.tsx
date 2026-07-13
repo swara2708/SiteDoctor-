@@ -4,6 +4,7 @@ import LandingPage from './pages/LandingPage'
 import LoginPage from './pages/LoginPage'
 import SignupPage from './pages/SignupPage'
 import DashboardPage from './pages/DashboardPage'
+import SiteDetailPage from './pages/SiteDetailPage'
 import AnalyticsPage from './pages/AnalyticsPage'
 import SettingsPage from './pages/SettingsPage'
 import ProtectedRoute from './components/ProtectedRoute'
@@ -40,6 +41,15 @@ function AppContent() {
               element={
                 <ProtectedRoute>
                   <DashboardPage />
+                </ProtectedRoute>
+              } 
+            />
+
+            <Route 
+              path="/dashboard/sites/:siteId" 
+              element={
+                <ProtectedRoute>
+                  <SiteDetailPage />
                 </ProtectedRoute>
               } 
             />

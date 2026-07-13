@@ -37,17 +37,28 @@ export default defineConfig(({ mode }) => {
                 }
 
                 // 1. Fetch raw HTML
-                const targetResponse = await fetch(url, {
-                  headers: {
-                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-                  },
-                })
+                let targetResponse;
+                try {
+                  targetResponse = await fetch(url, {
+                    headers: {
+                      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                    },
+                  })
+                } catch (fetchErr: any) {
+                  console.error(`[SiteDoctor+ Debug] Fetch request failed for URL ${url}:`, fetchErr.message);
+                  throw new Error("Could not fetch this site's content")
+                }
 
                 if (!targetResponse.ok) {
-                  throw new Error(`Failed to fetch website HTML. Status: ${targetResponse.status}`)
+                  console.error(`[SiteDoctor+ Debug] Fetch returned non-ok status: ${targetResponse.status} for URL ${url}`);
+                  throw new Error("Could not fetch this site's content")
                 }
 
                 const html = await targetResponse.text()
+                if (!html || html.trim().length === 0) {
+                  console.error(`[SiteDoctor+ Debug] Fetch returned empty HTML for URL ${url}`);
+                  throw new Error("Could not fetch this site's content")
+                }
 
                 // 2. Extract key content via regexes
                 const titleMatch = html.match(/<title[^>]*>([\s\S]*?)<\/title>/i)
@@ -76,6 +87,22 @@ export default defineConfig(({ mode }) => {
                 while ((match = h3Regex.exec(html)) !== null) {
                   h3s.push(match[1].replace(/<[^>]*>/g, '').trim())
                 }
+
+                // Technical SEO extraction checks
+                const canonicalMatch = html.match(/<link[^>]*rel=["']canonical["'][^>]*href=["']([^"']+)["']/i) ||
+                                       html.match(/<link[^>]*href=["']([^"']+)["'][^>]*rel=["']canonical["']/i)
+                const hasCanonical = !!canonicalMatch
+
+                const ogRegex = /<meta[^>]*property=["']og:[^"']+["']/gi
+                let ogCount = 0
+                while (ogRegex.exec(html) !== null) {
+                  ogCount++
+                }
+
+                const faviconMatch = html.match(/<link[^>]*rel=["'](?:shortcut )?icon["']/i) || html.match(/<link[^>]*href=["'][^"']*favicon[^"']*["']/i)
+                const hasFavicon = !!faviconMatch
+
+                const hasSchema = html.includes('type="application/ld+json"') || html.includes("type='application/ld+json'")
 
                 // Extract and resolve image URLs
                 const rawImages: string[] = []
@@ -183,25 +210,32 @@ export default defineConfig(({ mode }) => {
                   throw new Error('Groq API Key is not configured on the server. Please check your .env file.')
                 }
 
-                const groqPrompt = `
+                 const groqPrompt = `
 You are an expert web audit tool analyzing a website's content for SEO health and content trustworthiness.
 Analyze the following extracted page details:
 - URL: ${url}
+- URL Scheme: ${url.startsWith('https://') ? 'HTTPS (Secure)' : 'HTTP (Insecure)'}
 - Title: ${title}
 - Meta Description: ${description}
 - H1 Headings: ${h1s.slice(0, 5).join(', ')}
 - H2 Headings: ${h2s.slice(0, 10).join(', ')}
 - H3 Headings: ${h3s.slice(0, 10).join(', ')}
+- Canonical Tag Present: ${hasCanonical ? 'Yes' : 'No'}
+- Open Graph Tags Found: ${ogCount}
+- Favicon Found: ${hasFavicon ? 'Yes' : 'No'}
+- Structured Data (JSON-LD) Found: ${hasSchema ? 'Yes' : 'No'}
 - Image Count: ${uniqueImages.length}
 - Body Text Sample: ${truncatedBody}
 
-You MUST evaluate the site across exactly these 6 fixed SEO categories:
+You MUST evaluate the site across exactly these 8 fixed SEO categories:
 1. Meta Tags (Checks if title tag and meta description exist, are the right length, and accurately describe the page)
 2. Headings Structure (Checks if H1/H2/H3 are used properly and logically to organize content)
 3. Page Speed (Checks for signs of slow-loading elements like large unoptimized images, render-blocking scripts, etc.)
 4. Mobile-Friendliness (Checks for a viewport meta tag and responsive indicators in the HTML)
 5. Content Quality (Checks if content is relevant, sufficiently detailed, and not thin or duplicate)
 6. Image Alt Text (Checks if images have descriptive alt attributes for accessibility and SEO)
+7. Server & Security (Checks if the site is using HTTPS secure protocol based on the URL scheme, and other visible security elements)
+8. Advanced SEO (Checks for technical signals detectable from HTML such as canonical tags, Open Graph meta tags, structured data/schema markup, or a favicon)
 
 Return a STRICT JSON object with the following structure. Do NOT wrap it in markdown code blocks (\`\`\`json), and do NOT add any conversational prefix or suffix. Return ONLY the JSON object.
 
@@ -261,6 +295,20 @@ For other flags, set "excerpt" and "reasoning" to null.
       "explanation": "All detected images have descriptive alt text tags.",
       "fix_suggestion": "None required.",
       "priority": "Low"
+    },
+    {
+      "category_name": "Server & Security",
+      "status": "Good",
+      "explanation": "Excellent setup, no issues detected. Site is served securely over HTTPS.",
+      "fix_suggestion": "None required.",
+      "priority": "Low"
+    },
+    {
+      "category_name": "Advanced SEO",
+      "status": "Needs Improvement",
+      "explanation": "Social Open Graph tags and Schema structured data are missing.",
+      "fix_suggestion": "Add og:title/og:description tags and json-ld schema markup to improve indexability.",
+      "priority": "Medium"
     }
   ],
   "trust_score": 75,
@@ -276,17 +324,16 @@ For other flags, set "excerpt" and "reasoning" to null.
 }
 `
 
-                // Log the exact parameters/content being sent to Groq
-                console.log(`[SiteDoctor+ Debug] Preparing scan details for URL: ${url}`);
-                console.log(`[SiteDoctor+ Debug] Extracted content parameters:
+                // Log RIGHT BEFORE the Groq AI API call
+                console.log(`[SiteDoctor+ Debug] Scanning URL: ${url}`);
+                console.log(`[SiteDoctor+ Debug] Scraped Content Sent to Groq:
                   - Title: "${title}"
-                  - Description: "${description}"
+                  - Meta Description: "${description}"
                   - H1 Headings: ${JSON.stringify(h1s)}
                   - H2 Headings: ${JSON.stringify(h2s)}
                   - H3 Headings: ${JSON.stringify(h3s)}
-                  - Image Count: ${uniqueImages.length}
-                  - Truncated Body Text Length: ${truncatedBody.length}
-                  - Truncated Body Text Sample (first 500 chars): "${truncatedBody.substring(0, 500)}..."`);
+                  - Body Text Length: ${truncatedBody.length}
+                  - Body Text Sample (first 200 chars): "${truncatedBody.substring(0, 200)}..."`);
 
                 const groqResponse = await fetch('https://api.groq.com/openai/v1/chat/completions', {
                   method: 'POST',
@@ -314,26 +361,27 @@ For other flags, set "excerpt" and "reasoning" to null.
                 if (!groqResponse.ok) {
                   const errorText = await groqResponse.text()
                   console.error(`[SiteDoctor+ Debug] Groq API returned HTTP error: ${groqResponse.status} - ${errorText}`);
-                  throw new Error(`Groq API returned an error: ${groqResponse.status} - ${errorText}`)
+                  throw new Error("Analysis failed, please try again")
                 }
 
                 const groqResultJson = (await groqResponse.json()) as any
                 const rawContent = groqResultJson.choices[0].message.content.trim()
 
-                // Log the raw response before parsing
+                // Log RIGHT AFTER the Groq AI API call
                 console.log(`[SiteDoctor+ Debug] Raw Groq AI Response for ${url}:`, rawContent);
 
                 // Parse the inner JSON with strict error handling and logging
                 let parsedAudit: any;
                 try {
                   parsedAudit = JSON.parse(rawContent)
+                  console.log(`[SiteDoctor+ Debug] JSON.parse() succeeded for ${url}`);
                   if (!parsedAudit || typeof parsedAudit.seo_score !== 'number' || typeof parsedAudit.trust_score !== 'number') {
                     throw new Error("Missing required 'seo_score' or 'trust_score' fields in AI JSON response.")
                   }
                 } catch (parseErr: any) {
-                  console.error(`[SiteDoctor+ Debug] Groq AI parsing failed or missing fields: ${parseErr.message}`);
+                  console.error(`[SiteDoctor+ Debug] JSON.parse() failed or missing fields for ${url}: ${parseErr.message}`);
                   console.error(`[SiteDoctor+ Debug] Raw content was: ${rawContent}`);
-                  throw new Error(`Failed to parse AI audit results: ${parseErr.message}`)
+                  throw new Error("Analysis failed, please try again")
                 }
 
                 const prepareLocalImageBase64 = async (imgUrl: string) => {

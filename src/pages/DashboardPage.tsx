@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import type { FormEvent } from 'react'
+import { Link } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
 import { supabase } from '../lib/supabaseClient'
 import { Button } from '../components/ui/button'
@@ -22,20 +23,11 @@ import {
   Calendar,
   AlertTriangle,
   Play,
-  FileText,
-  Activity,
   Loader2,
   AlertCircle,
-  Image as ImageIcon,
-  ChevronDown,
-  Tag,
-  List,
-  Gauge,
-  Smartphone,
-  Trophy,
-  Check,
 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
+import { ResponsiveContainer, LineChart, Line } from 'recharts'
 import AnimatedNumber from '../components/AnimatedNumber'
 
 interface ImageFlag {
@@ -86,7 +78,7 @@ function ProgressRing({ value, label, type, size = 68 }: { value: number; label:
   }
 
   return (
-    <div className="flex flex-col items-center justify-center p-2.5 rounded-xl border border-slate-800 bg-slate-950/40 relative group hover:border-slate-700/60 transition-all duration-300 hover:shadow-md hover:shadow-emerald-500/5">
+    <div className="flex flex-col items-center justify-center p-2.5 rounded-xl border border-slate-800/80 bg-slate-900/40 relative group hover:border-slate-700/60 transition-all duration-300 hover:shadow-md hover:shadow-emerald-500/5">
       <svg width={size} height={size} className="transform -rotate-90">
         <defs>
           <linearGradient id="combinedGrad" x1="0%" y1="0%" x2="100%" y2="100%">
@@ -127,44 +119,7 @@ function ProgressRing({ value, label, type, size = 68 }: { value: number; label:
     </div>
   )
 }
-interface CollapsibleSectionProps {
-  title: string
-  icon: React.ReactNode
-  children: React.ReactNode
-}
 
-function CollapsibleSection({ title, icon, children }: CollapsibleSectionProps) {
-  const [isOpen, setIsOpen] = useState(false)
-  return (
-    <div className="border border-slate-800 rounded bg-slate-950/40 text-xs overflow-hidden mt-3">
-      <button
-        onClick={() => setIsOpen(!isOpen)}
-        className="w-full px-3 py-2 flex items-center justify-between font-semibold text-slate-400 select-none hover:text-slate-200 focus:outline-none transition-colors"
-      >
-        <span className="flex items-center gap-1.5">
-          {icon}
-          {title}
-        </span>
-        <ChevronDown className={`h-3.5 w-3.5 transition-transform duration-300 ${isOpen ? 'rotate-180' : ''} text-slate-500`} />
-      </button>
-      
-      <AnimatePresence initial={false}>
-        {isOpen && (
-          <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: 'auto', opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.3, ease: "easeInOut" }}
-          >
-            <div className="px-3 pb-3 pt-1 border-t border-slate-800/60 mt-1">
-              {children}
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </div>
-  )
-}
 
 export default function DashboardPage() {
   const { user } = useAuth()
@@ -193,9 +148,6 @@ export default function DashboardPage() {
   const [actionLoading, setActionLoading] = useState(false)
   const [emailNotifications, setEmailNotifications] = useState(true)
 
-  // Addressed suggestions tracking mapped per scanId
-  const [addressedSuggestions, setAddressedSuggestions] = useState<Record<string, string[]>>({})
-
   // Form Inline Validation Errors
   const [addUrlError, setAddUrlError] = useState('')
   const [editNicknameError, setEditNicknameError] = useState('')
@@ -218,18 +170,6 @@ export default function DashboardPage() {
     } catch (err) {
       console.warn('Could not read user profile settings:', err)
     }
-  }
-
-  const toggleSuggestion = (scanId: string, suggestionId: string) => {
-    console.log(`[SiteDoctor+ Debug] Toggling suggestion checkbox: scanId=${scanId}, suggestionId=${suggestionId}`);
-    setAddressedSuggestions((prev) => {
-      const currentList = prev[scanId] || []
-      const newList = currentList.includes(suggestionId)
-        ? currentList.filter((id) => id !== suggestionId)
-        : [...currentList, suggestionId]
-      console.log(`[SiteDoctor+ Debug] Updated addressed suggestions for scanId=${scanId}:`, newList);
-      return { ...prev, [scanId]: newList }
-    })
   }
 
   const fetchSites = async () => {
@@ -449,17 +389,19 @@ export default function DashboardPage() {
     )[0]
   }
 
-
-  // Helper to compute flags count
-  const getImageFlagsStats = (scan: Scan) => {
-    if (!scan.image_flags || scan.image_flags.length === 0) {
-      return { total: 0, flagged: 0 }
-    }
-    const flagged = scan.image_flags.filter(
-      (img) => img.looks_like_stock_photo || img.quality_flag !== 'normal'
-    ).length
-    return { total: scan.image_flags.length, flagged }
+  // Helper to resolve sparkline data
+  const getSparklineData = (site: Site) => {
+    if (!site.scans || site.scans.length < 2) return null
+    const sorted = [...site.scans].sort(
+      (a, b) => new Date(a.scanned_at).getTime() - new Date(b.scanned_at).getTime()
+    )
+    const last5 = sorted.slice(-5)
+    return last5.map((scan) => ({
+      score: scan.combined_score || 0
+    }))
   }
+
+
 
   return (
     <motion.div 
@@ -467,7 +409,7 @@ export default function DashboardPage() {
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
       transition={{ duration: 0.3 }}
-      className="min-h-screen bg-slate-950 text-slate-100 flex flex-col md:flex-row font-sans"
+      className="min-h-screen bg-[#030712] text-slate-100 flex flex-col md:flex-row font-sans"
     >
       
       {/* SIDEBAR NAVIGATION */}
@@ -568,104 +510,7 @@ export default function DashboardPage() {
                 const latestScan = getLatestScan(site)
                 const isScanning = !!scanningSites[site.id]
                 const scanError = scanErrors[site.id]
-                const imgStats = latestScan ? getImageFlagsStats(latestScan) : { total: 0, flagged: 0 }
 
-                const suggestions = latestScan ? (() => {
-                  const list: Array<{ 
-                    id: string; 
-                    type: 'SEO' | 'Trust' | 'Image'; 
-                    title: string; 
-                    fix: string; 
-                    priority: 'High' | 'Medium' | 'Low';
-                    excerpt?: string | null;
-                    reasoning?: string | null;
-                  }> = []
-                  
-                  // 1. SEO report suggestions
-                  const seoCategories = latestScan.seo_report?.categories || []
-                  seoCategories.forEach((cat: any) => {
-                    // Skip Image Alt Text suggestions if there are no images on the page
-                    if (imgStats.total === 0 && cat.category_name === 'Image Alt Text') {
-                      return
-                    }
-                    if (cat.status === 'Needs Improvement' || cat.status === 'Critical') {
-                      list.push({
-                        id: `seo-${cat.category_name}`,
-                        type: 'SEO',
-                        title: `${cat.category_name}: ${cat.explanation}`,
-                        fix: cat.fix_suggestion,
-                        priority: cat.priority || 'Medium'
-                      })
-                    }
-                  })
-
-                  // 2. Trust report suggestions
-                  const trustFlags = latestScan.trust_report?.flags || []
-                  trustFlags.forEach((flg: any, idx: number) => {
-                    list.push({
-                      id: `trust-${idx}-${flg.flag.replace(/\s+/g, '-').toLowerCase()}`,
-                      type: 'Trust',
-                      title: flg.flag,
-                      fix: flg.explanation ? `Recommendation: ${flg.explanation}` : 'Improve site trust indicator.',
-                      priority: flg.priority || 'Medium',
-                      excerpt: flg.excerpt || null,
-                      reasoning: flg.reasoning || null
-                    })
-                  })
-
-                  // 3. Image suggestions
-                  const imageFlags = latestScan.image_flags || []
-                  imageFlags.forEach((img: any, idx: number) => {
-                    const imgUrl = img.image_url || ''
-                    const displayUrl = imgUrl.length > 45 ? imgUrl.substring(0, 45) + '...' : imgUrl
-                    if (img.quality_flag === 'broken') {
-                      list.push({
-                        id: `img-broken-${idx}`,
-                        type: 'Image',
-                        title: `Image failed to load: ${displayUrl}`,
-                        fix: 'This image failed to load. Replace it with a valid asset.',
-                        priority: 'High'
-                      })
-                    }
-                    if (img.looks_like_stock_photo) {
-                      list.push({
-                        id: `img-stock-${idx}`,
-                        type: 'Image',
-                        title: `Stock photo detected: ${displayUrl}`,
-                        fix: 'Replace this image with authentic, custom photography to build trust.',
-                        priority: 'Medium'
-                      })
-                    }
-                    if (img.quality_flag === 'low-resolution') {
-                      list.push({
-                        id: `img-low-res-${idx}`,
-                        type: 'Image',
-                        title: `Low resolution image: ${displayUrl}`,
-                        fix: 'Replace this image with a higher resolution version.',
-                        priority: 'Medium'
-                      })
-                    }
-                    if (img.quality_flag === 'placeholder') {
-                      list.push({
-                        id: `img-placeholder-${idx}`,
-                        type: 'Image',
-                        title: `Placeholder image: ${displayUrl}`,
-                        fix: 'Replace this placeholder with actual, custom content.',
-                        priority: 'Medium'
-                      })
-                    }
-                  })
-
-                  // Sort priority: High -> Medium -> Low
-                  const priorityWeight = { High: 3, Medium: 2, Low: 1 }
-                  return list.sort((a, b) => {
-                    const weightA = priorityWeight[a.priority] || 2
-                    const weightB = priorityWeight[b.priority] || 2
-                    return weightB - weightA
-                  })
-                })() : []
-
-                const addressedList = latestScan ? (addressedSuggestions[latestScan.id] || []) : []
 
                 return (
                   <motion.div
@@ -689,7 +534,7 @@ export default function DashboardPage() {
                     }}
                     className="h-full flex flex-col"
                   >
-                    <Card className={`relative bg-slate-900/50 border-slate-800 text-slate-100 hover:border-slate-700/80 transition-all flex flex-col justify-between h-full overflow-hidden ${
+                    <Card className={`relative bg-[#0b0f19] border-slate-900/80 text-slate-100 hover:border-slate-800/80 transition-all flex flex-col justify-between h-full overflow-hidden ${
                       scanningSites[site.id] ? 'border-emerald-500/40 ring-1 ring-emerald-500/20 shadow-lg shadow-emerald-500/5' : ''
                     }`}>
                       {scanningSites[site.id] && (
@@ -750,269 +595,48 @@ export default function DashboardPage() {
                         </div>
                       )}
 
-                      {/* Display Suggestions to Improve Your Website */}
+                      {/* Trend Sparkline */}
                       {latestScan && !isScanning && (
-                        <div className="mt-4 pt-4 border-t border-slate-800/40">
-                          <h4 className="text-xs font-bold text-slate-400 flex items-center justify-between mb-2 px-1">
-                            <span className="flex items-center gap-1.5 font-bold">
-                              <AlertCircle className="h-3.5 w-3.5 text-amber-500" />
-                              Suggestions to Improve
-                            </span>
-                            {suggestions.length > 0 && (
-                              <span className="text-[10px] bg-slate-800 text-slate-400 px-2 py-0.5 rounded font-mono">
-                                {addressedList.filter(id => suggestions.some(s => s.id === id)).length} of {suggestions.length} addressed
-                              </span>
-                            )}
-                          </h4>
-
-                          {suggestions.length > 0 && (
-                            <div className="w-full bg-slate-850 h-1.5 rounded-full mb-3 overflow-hidden">
-                              <div 
-                                className="bg-gradient-to-r from-amber-500 to-emerald-500 h-full transition-all duration-500" 
-                                style={{ 
-                                  width: `${(addressedList.filter(id => suggestions.some(s => s.id === id)).length / suggestions.length) * 100}%` 
-                                }}
-                              />
-                            </div>
-                          )}
-
-                          {suggestions.length === 0 ? (
-                            <div className="bg-emerald-500/5 border border-emerald-500/20 rounded-xl p-3 flex items-start gap-2.5">
-                              <Trophy className="h-4 w-4 text-emerald-400 shrink-0 mt-0.5 animate-pulse" />
-                              <div className="text-[11px] text-emerald-400/90 leading-normal">
-                                <span className="font-bold block text-emerald-400 mb-0.5">Great job! No major issues found.</span>
-                                Your site meets excellent SEO and Trust standards.
+                        <div className="mt-4 pt-3 border-t border-slate-800/40 flex items-center justify-between gap-4">
+                          <span className="text-[10px] uppercase font-bold tracking-wider text-slate-500">Trend</span>
+                          {(() => {
+                            const sparkData = getSparklineData(site)
+                            if (!sparkData) {
+                              return <span className="text-[10px] text-slate-655 italic">Not enough data yet</span>
+                            }
+                            return (
+                              <div className="w-24 h-6">
+                                <ResponsiveContainer width="100%" height="100%">
+                                  <LineChart data={sparkData}>
+                                    <Line 
+                                      type="monotone" 
+                                      dataKey="score" 
+                                      stroke="#10b981" 
+                                      strokeWidth={1.5} 
+                                      dot={false} 
+                                    />
+                                  </LineChart>
+                                </ResponsiveContainer>
                               </div>
-                            </div>
-                          ) : (
-                            <div className="space-y-2 max-h-[300px] overflow-y-auto pr-1">
-                              <AnimatePresence initial={false}>
-                                {suggestions.map((s, sIdx) => {
-                                  const isAddressed = addressedList.includes(s.id)
-                                
-                                const getPriorityStyles = (p: string) => {
-                                  if (p === 'High') return 'bg-red-500/10 text-red-400 border-red-500/20'
-                                  if (p === 'Medium') return 'bg-amber-500/10 text-amber-400 border-amber-500/20'
-                                  return 'bg-slate-800 text-slate-400 border-slate-700/50'
-                                }
-
-                                return (
-                                  <motion.div 
-                                    key={s.id}
-                                    layout
-                                    initial={{ opacity: 0, y: 15 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    exit={{ opacity: 0, scale: 0.95 }}
-                                    transition={{ duration: 0.3, delay: sIdx * 0.04 }}
-                                    className={`bg-slate-950/30 border rounded-lg p-2.5 flex gap-2.5 transition-all duration-300 ${
-                                      isAddressed 
-                                        ? 'border-slate-800/40 opacity-55 line-through decoration-slate-600' 
-                                        : 'border-slate-850 hover:border-slate-800'
-                                    }`}
-                                  >
-                                    <button 
-                                      onClick={() => toggleSuggestion(latestScan.id, s.id)}
-                                      className={`h-4 w-4 rounded border flex items-center justify-center shrink-0 mt-0.5 transition-all ${
-                                        isAddressed 
-                                          ? 'bg-emerald-500 border-emerald-500 text-slate-950' 
-                                          : 'border-slate-700 hover:border-slate-500 bg-transparent'
-                                      }`}
-                                      aria-label={isAddressed ? "Mark as uncompleted" : "Mark as completed"}
-                                    >
-                                      {isAddressed && <Check className="h-3 w-3 stroke-[3]" />}
-                                    </button>
-
-                                    <div className="flex-1 space-y-1 min-w-0">
-                                      <div className="flex items-center gap-1.5 flex-wrap">
-                                        <span className={`text-[8px] uppercase tracking-wider font-extrabold px-1.5 py-0.2 rounded border ${getPriorityStyles(s.priority)}`}>
-                                          {s.priority}
-                                        </span>
-                                        <span className="text-[9px] bg-slate-800 text-slate-400 font-semibold px-1 rounded-sm">
-                                          {s.type}
-                                        </span>
-                                      </div>
-                                      
-                                      <div className="text-[11px] font-bold text-slate-200 leading-snug">
-                                        {s.title}
-                                      </div>
-                                      <div className="text-[10px] text-slate-400 leading-normal">
-                                        {s.fix}
-                                      </div>
-                                      {s.type === 'Trust' && s.excerpt && (
-                                        <div className="mt-2 p-2 bg-slate-950/60 border border-slate-850/65 rounded text-[10px] space-y-1.5">
-                                          <div>
-                                            <span className="font-semibold text-[9px] text-emerald-400/80 uppercase tracking-wider block mb-0.5">Flagged Excerpt</span>
-                                            <q className="italic text-slate-300">"{s.excerpt}"</q>
-                                          </div>
-                                          {s.reasoning && (
-                                            <div>
-                                              <span className="font-semibold text-[9px] text-amber-400/80 uppercase tracking-wider block mb-0.5">AI-Generation Analysis</span>
-                                              <p className="text-slate-400 leading-relaxed">{s.reasoning}</p>
-                                            </div>
-                                          )}
-                                        </div>
-                                      )}
-                                    </div>
-                                  </motion.div>
-                                )
-                              })}
-                              </AnimatePresence>
-                            </div>
-                          )}
+                            )
+                          })()}
                         </div>
                       )}
 
-                      {/* Display SEO Health Breakdown list */}
-                      {latestScan && !isScanning && (
-                        <CollapsibleSection
-                          title="SEO Health Breakdown"
-                          icon={<Activity className="h-3.5 w-3.5 text-emerald-400" />}
-                        >
-                          <div className="grid grid-cols-1 gap-2.5 max-h-[350px] overflow-y-auto pt-1">
-                            {(() => {
-                              const rawCategories = latestScan.seo_report?.categories || []
-                              const categories = imgStats.total === 0 
-                                ? rawCategories.filter((cat: any) => cat.category_name !== 'Image Alt Text')
-                                : rawCategories
-                                
-                              const getCategoryIcon = (name: string) => {
-                                const lowerName = name.toLowerCase()
-                                if (lowerName.includes('meta')) return <Tag className="h-3.5 w-3.5 text-emerald-400" />
-                                if (lowerName.includes('heading')) return <List className="h-3.5 w-3.5 text-emerald-400" />
-                                if (lowerName.includes('speed')) return <Gauge className="h-3.5 w-3.5 text-emerald-400" />
-                                if (lowerName.includes('mobile') || lowerName.includes('friend')) return <Smartphone className="h-3.5 w-3.5 text-emerald-400" />
-                                if (lowerName.includes('content') || lowerName.includes('quality')) return <FileText className="h-3.5 w-3.5 text-emerald-400" />
-                                return <ImageIcon className="h-3.5 w-3.5 text-emerald-400" />
-                              }
-
-                              const getStatusStyles = (status: string) => {
-                                const val = (status || '').toLowerCase()
-                                if (val === 'good') return 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
-                                if (val === 'critical') return 'bg-red-500/10 text-red-400 border-red-500/20'
-                                return 'bg-amber-500/10 text-amber-400 border-amber-500/20'
-                              }
-
-                              if (categories.length === 0) {
-                                return (
-                                  <p className="text-[11px] text-slate-500 italic text-center py-2">
-                                    No detailed SEO breakdown available for this scan version.
-                                  </p>
-                                )
-                              }
-
-                              return categories.map((cat: any, idx: number) => (
-                                <motion.div 
-                                  key={cat.category_name} 
-                                  initial={{ opacity: 0, y: 10 }}
-                                  animate={{ opacity: 1, y: 0 }}
-                                  transition={{ duration: 0.3, delay: idx * 0.05 }}
-                                  className="bg-slate-900/40 border border-slate-850/80 rounded-lg p-2.5 space-y-1.5 hover:-translate-y-0.5 hover:shadow hover:shadow-emerald-500/5 hover:border-slate-800/80 transition-all duration-300"
-                                >
-                                  <div className="flex items-center justify-between gap-2">
-                                    <div className="flex items-center gap-1.5">
-                                      {getCategoryIcon(cat.category_name)}
-                                      <span className="text-[11px] font-bold text-slate-300">{cat.category_name}</span>
-                                    </div>
-                                    <motion.span 
-                                      animate={{ scale: [1, 1.05, 1] }}
-                                      transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
-                                      className={`px-1.5 py-0.2 rounded border text-[8px] font-extrabold uppercase tracking-wide ${getStatusStyles(cat.status)}`}
-                                    >
-                                      {cat.status}
-                                    </motion.span>
-                                  </div>
-                                  
-                                  <p className="text-[11px] text-slate-400 leading-normal">
-                                    {cat.explanation}
-                                  </p>
-                                  
-                                  {cat.fix_suggestion && cat.fix_suggestion !== 'None required.' && (
-                                    <div className="bg-slate-950/40 border border-slate-850/40 rounded p-1.5 text-[10px] text-slate-350">
-                                      <span className="font-semibold text-[9px] text-amber-400/80 uppercase tracking-wider block mb-0.5">Recommended Fix</span>
-                                      {cat.fix_suggestion}
-                                    </div>
-                                  )}
-                                </motion.div>
-                              ))
-                            })()}
-                          </div>
-                        </CollapsibleSection>
-                      )}
-
-                      {/* Display Image Flags list */}
-                      {latestScan && !isScanning && (
-                        <div className="mt-3">
-                          {imgStats.total === 0 ? (
-                            <div className="text-[11px] text-slate-500 flex items-center gap-1.5 px-1 py-0.5">
-                              <ImageIcon className="h-3.5 w-3.5" /> No images found on this page — image analysis skipped.
-                            </div>
-                          ) : (
-                            <CollapsibleSection
-                              title={`Image Flags (${imgStats.flagged} of ${imgStats.total} flagged)`}
-                              icon={<ImageIcon className="h-3.5 w-3.5 text-slate-500" />}
-                            >
-                              <div className="space-y-3 divide-y divide-slate-800/40 pt-1">
-                                {latestScan.image_flags?.map((img, idx) => {
-
-                                  return (
-                                    <div key={idx} className={`pt-2 first:pt-0 flex gap-3 items-start`}>
-                                      <div className="relative shrink-0">
-                                        {img.quality_flag === 'broken' ? (
-                                          <div className="w-10 h-10 rounded border border-slate-800 bg-slate-900 flex items-center justify-center text-[10px] text-red-500 font-bold">
-                                            ERR
-                                          </div>
-                                        ) : (
-                                          <img 
-                                            src={img.image_url} 
-                                            alt="Scanned page" 
-                                            className="w-10 h-10 object-cover rounded border border-slate-800"
-                                            onError={(e) => {
-                                              (e.target as HTMLImageElement).src = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="red" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="9" y1="9" x2="15" y2="15"/><line x1="15" y1="9" x2="9" y2="15"/></svg>'
-                                            }}
-                                          />
-                                        )}
-                                      </div>
-
-                                      <div className="space-y-0.5 min-w-0 flex-1">
-                                        <div className="flex items-center gap-1.5 flex-wrap">
-                                          <span className={`text-[10px] px-1 py-0.2 rounded font-semibold ${
-                                            img.looks_like_stock_photo 
-                                              ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20' 
-                                              : 'bg-slate-800 text-slate-400'
-                                          }`}>
-                                            {img.looks_like_stock_photo ? 'Stock Photo' : 'Authentic'}
-                                          </span>
-                                          
-                                          <span className={`text-[10px] px-1 py-0.2 rounded font-semibold ${
-                                            img.quality_flag !== 'normal' 
-                                              ? 'bg-red-500/10 text-red-400 border border-red-500/20' 
-                                              : 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
-                                          }`}>
-                                            {img.quality_flag}
-                                          </span>
-                                        </div>
-
-                                        {img.reasoning && (
-                                          <p className="text-[10px] text-slate-400 leading-normal mt-1">
-                                            {img.reasoning}
-                                          </p>
-                                        )}
-                                        {img.relevance_note && (
-                                          <p className="text-[10px] text-slate-500 leading-normal italic">
-                                            {img.relevance_note}
-                                          </p>
-                                        )}
-                                      </div>
-                                    </div>
-                                  )
-                                })}
-                              </div>
-                            </CollapsibleSection>
-                          )}
+                      {/* Display No Scan Yet / Scanning / Scan Error message */}
+                      {isScanning ? (
+                        <div className="mt-6 flex flex-col items-center justify-center p-6 border border-dashed border-slate-800 bg-slate-950/10 rounded-xl space-y-3">
+                          <Loader2 className="h-6 w-6 animate-spin text-emerald-400" />
+                          <span className="text-xs text-slate-400 font-semibold">Running full website audit...</span>
                         </div>
-                      )}
+                      ) : !latestScan ? (
+                        <div className="mt-6 flex flex-col items-center justify-center p-6 border border-dashed border-slate-850 bg-slate-950/20 rounded-xl space-y-2 text-center">
+                          <AlertTriangle className="h-6 w-6 text-amber-500/80" />
+                          <span className="text-xs text-slate-400 font-semibold">No scans executed yet</span>
+                          <p className="text-[10px] text-slate-500 max-w-[200px]">Click the button below to initiate your first audit.</p>
+                        </div>
+                      ) : null}
 
-                      {/* Scan error display */}
                       {scanError && (
                         <div className="mt-4 p-2 bg-red-950/30 border border-red-500/20 rounded text-xs text-red-400 flex items-start gap-2">
                           <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
@@ -1031,23 +655,7 @@ export default function DashboardPage() {
                       </CardDescription>
                     </CardHeader>
                     
-                    <div className="px-6 pb-6 pt-2 border-t border-slate-800/80 flex items-center justify-between mt-auto">
-                      {isScanning ? (
-                        <div className="inline-flex items-center gap-2 text-slate-400 text-xs font-semibold py-1">
-                          <Loader2 className="h-4 w-4 animate-spin text-emerald-400" />
-                          Analyzing...
-                        </div>
-                      ) : !latestScan ? (
-                        <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded bg-slate-800 text-slate-400 text-xs font-semibold">
-                          <AlertTriangle className="h-3.5 w-3.5 text-amber-500" />
-                          No scans yet
-                        </div>
-                      ) : (
-                        <div className="text-xs text-slate-500">
-                          Scan complete
-                        </div>
-                      )}
-                      
+                    <div className="px-6 pb-6 pt-3 border-t border-slate-800/80 flex items-center justify-between mt-auto gap-2">
                       <div className="flex items-center gap-3">
                         <a 
                           href={site.url} 
@@ -1057,11 +665,26 @@ export default function DashboardPage() {
                         >
                           Visit <ExternalLink className="h-3.5 w-3.5" />
                         </a>
-                        
+                      </div>
+                      
+                      <div className="flex items-center gap-2">
+                        {latestScan && (
+                          <Link to={`/dashboard/sites/${site.id}`}>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="h-8 text-xs border-slate-800 text-slate-350 hover:bg-slate-800 hover:text-slate-100"
+                            >
+                              View Details
+                            </Button>
+                          </Link>
+                        )}
+
                         <Button
                           onClick={() => handleScan(site)}
                           disabled={isScanning}
-                          className="h-8 text-xs bg-emerald-500 text-slate-950 font-bold hover:bg-emerald-400 flex items-center gap-1.5"
+                          size="sm"
+                          className="h-8 text-xs bg-emerald-500 text-slate-950 font-bold hover:bg-emerald-400 flex items-center gap-1"
                         >
                           {isScanning ? (
                             <>Scanning...</>

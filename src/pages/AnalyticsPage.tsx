@@ -15,10 +15,13 @@ import {
   FileText,
   ShieldAlert,
   ChevronDown,
+  ChevronUp,
   AlertCircle,
+  ArrowUpDown,
 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import AnimatedNumber from '../components/AnimatedNumber'
+
 import {
   ResponsiveContainer,
   LineChart,
@@ -86,6 +89,49 @@ export default function AnalyticsPage() {
   const [loading, setLoading] = useState(true)
   const [errorMsg, setErrorMsg] = useState('')
   const [selectedSiteId, setSelectedSiteId] = useState<string>('all')
+
+  const [sortField, setSortField] = useState<'nickname' | 'seo_score' | 'trust_score' | 'combined_score'>('nickname')
+  const [sortAsc, setSortAsc] = useState(true)
+
+  const getComparisonData = () => {
+    const data = sites.map(site => {
+      const scans = site.scans || []
+      const latest = scans.length > 0
+        ? [...scans].sort((a, b) => new Date(b.scanned_at).getTime() - new Date(a.scanned_at).getTime())[0]
+        : null
+      return {
+        id: site.id,
+        nickname: site.nickname || site.url.replace(/^https?:\/\//i, ''),
+        url: site.url,
+        seo_score: latest ? latest.seo_score : null,
+        trust_score: latest ? latest.trust_score : null,
+        combined_score: latest ? latest.combined_score : null
+      }
+    })
+
+    return data.sort((a, b) => {
+      let valA: any = a[sortField]
+      let valB: any = b[sortField]
+
+      if (valA === null || valA === undefined) return sortAsc ? 1 : -1
+      if (valB === null || valB === undefined) return sortAsc ? -1 : 1
+
+      if (typeof valA === 'string') {
+        return sortAsc ? valA.localeCompare(valB) : valB.localeCompare(valA)
+      } else {
+        return sortAsc ? valA - valB : valB - valA
+      }
+    })
+  }
+
+  const handleSort = (field: 'nickname' | 'seo_score' | 'trust_score' | 'combined_score') => {
+    if (sortField === field) {
+      setSortAsc(!sortAsc)
+    } else {
+      setSortField(field)
+      setSortAsc(true)
+    }
+  }
 
   useEffect(() => {
     fetchSitesAndScans()
@@ -252,7 +298,7 @@ export default function AnalyticsPage() {
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
       transition={{ duration: 0.3 }}
-      className="min-h-screen bg-slate-950 text-slate-100 flex flex-col md:flex-row font-sans"
+      className="min-h-screen bg-[#030712] text-slate-100 flex flex-col md:flex-row font-sans"
     >
       
       {/* SIDEBAR NAVIGATION */}
@@ -328,7 +374,7 @@ export default function AnalyticsPage() {
               
               {/* SUMMARY STAT CARDS */}
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                <Card className="bg-slate-900/40 border-slate-800 text-slate-100 p-4">
+                <Card className="bg-[#0b0f19] border-slate-900/80 text-slate-100 p-4">
                   <div className="flex items-center justify-between">
                     <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">Tracked Sites</p>
                     <Globe className="h-4 w-4 text-slate-650" />
@@ -337,7 +383,7 @@ export default function AnalyticsPage() {
                     <AnimatedNumber value={totalSites} />
                   </p>
                 </Card>
-                <Card className="bg-slate-900/40 border-slate-800 text-slate-100 p-4">
+                <Card className="bg-[#0b0f19] border-slate-900/80 text-slate-100 p-4">
                   <div className="flex items-center justify-between">
                     <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">Total Scans</p>
                     <FileText className="h-4 w-4 text-slate-650" />
@@ -346,7 +392,7 @@ export default function AnalyticsPage() {
                     <AnimatedNumber value={totalScans} />
                   </p>
                 </Card>
-                <Card className="bg-slate-900/40 border-slate-800 text-slate-100 p-4">
+                <Card className="bg-[#0b0f19] border-slate-900/80 text-slate-100 p-4">
                   <div className="flex items-center justify-between">
                     <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">Avg Index</p>
                     <Activity className="h-4 w-4 text-emerald-400" />
@@ -355,7 +401,7 @@ export default function AnalyticsPage() {
                     <AnimatedNumber value={avgCombined} />%
                   </p>
                 </Card>
-                <Card className="bg-slate-900/40 border-slate-800 text-slate-100 p-4">
+                <Card className="bg-[#0b0f19] border-slate-900/80 text-slate-100 p-4">
                   <div className="flex items-center justify-between">
                     <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">Latest Scan</p>
                     <Calendar className="h-4 w-4 text-slate-650" />
@@ -370,7 +416,7 @@ export default function AnalyticsPage() {
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 
                 {/* 1. HEALTH SCORE OVER TIME */}
-                <Card className="bg-slate-900/30 border-slate-800 text-slate-100">
+                <Card className="bg-[#0b0f19] border-slate-900/80 text-slate-100">
                   <CardHeader>
                     <CardTitle className="text-md font-bold text-slate-200">Site Health Index Over Time</CardTitle>
                     <CardDescription className="text-xs text-slate-550">
@@ -412,7 +458,7 @@ export default function AnalyticsPage() {
                 </Card>
 
                 {/* 2. SEO VS TRUST SCORE COMPARISON */}
-                <Card className="bg-slate-900/30 border-slate-800 text-slate-100">
+                <Card className="bg-[#0b0f19] border-slate-900/80 text-slate-100">
                   <CardHeader>
                     <CardTitle className="text-md font-bold text-slate-200">SEO vs Content Trust Comparison</CardTitle>
                     <CardDescription className="text-xs text-slate-550">
@@ -444,7 +490,7 @@ export default function AnalyticsPage() {
                 </Card>
 
                 {/* 3. FLAGGED ISSUES SEVERITY BREAKDOWN */}
-                <Card className="bg-slate-900/30 border-slate-800 text-slate-100 lg:col-span-2">
+                <Card className="bg-[#0b0f19] border-slate-900/80 text-slate-100 lg:col-span-2">
                   <CardHeader>
                     <CardTitle className="text-md font-bold text-slate-200">Flagged Issues Breakdown</CardTitle>
                     <CardDescription className="text-xs text-slate-550">
@@ -500,9 +546,111 @@ export default function AnalyticsPage() {
                       </>
                     )}
                   </div>
-                </Card>
+                 </Card>
 
               </div>
+
+              {/* SITE COMPARISON TABLE */}
+              <Card className="bg-[#111827]/70 border-slate-800/80 text-slate-100 mt-8">
+                <CardHeader>
+                  <CardTitle className="text-md font-bold text-slate-200">Site Comparison</CardTitle>
+                  <CardDescription className="text-xs text-slate-550">
+                    Sortable performance directory of all registered domains and audit statuses.
+                  </CardDescription>
+                </CardHeader>
+                
+                <div className="px-6 pb-6 overflow-x-auto">
+                  <table className="w-full text-left border-collapse text-xs">
+                    <thead>
+                      <tr className="border-b border-slate-850 text-slate-500 font-semibold uppercase tracking-wider select-none">
+                        <th 
+                          onClick={() => handleSort('nickname')}
+                          className="py-3 px-4 cursor-pointer hover:text-slate-350 transition-colors"
+                        >
+                          <div className="flex items-center gap-1">
+                            Site Name
+                            {sortField === 'nickname' ? (
+                              sortAsc ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />
+                            ) : <ArrowUpDown className="h-3 w-3 opacity-40" />}
+                          </div>
+                        </th>
+                        <th 
+                          onClick={() => handleSort('seo_score')}
+                          className="py-3 px-4 cursor-pointer hover:text-slate-355 transition-colors"
+                        >
+                          <div className="flex items-center gap-1">
+                            SEO Score
+                            {sortField === 'seo_score' ? (
+                              sortAsc ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />
+                            ) : <ArrowUpDown className="h-3 w-3 opacity-40" />}
+                          </div>
+                        </th>
+                        <th 
+                          onClick={() => handleSort('trust_score')}
+                          className="py-3 px-4 cursor-pointer hover:text-slate-355 transition-colors"
+                        >
+                          <div className="flex items-center gap-1">
+                            Trust Score
+                            {sortField === 'trust_score' ? (
+                              sortAsc ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />
+                            ) : <ArrowUpDown className="h-3 w-3 opacity-40" />}
+                          </div>
+                        </th>
+                        <th 
+                          onClick={() => handleSort('combined_score')}
+                          className="py-3 px-4 cursor-pointer hover:text-slate-355 transition-colors"
+                        >
+                          <div className="flex items-center gap-1">
+                            Combined Score
+                            {sortField === 'combined_score' ? (
+                              sortAsc ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />
+                            ) : <ArrowUpDown className="h-3 w-3 opacity-40" />}
+                          </div>
+                        </th>
+                        <th className="py-3 px-4 text-right">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-800/40 text-slate-300">
+                      {getComparisonData().map((item) => {
+                        return (
+                          <tr key={item.id} className="hover:bg-slate-900/30 transition-colors">
+                            <td className="py-3.5 px-4 font-medium text-slate-200">
+                              <div>
+                                <p className="font-semibold text-slate-200">{item.nickname}</p>
+                                <p className="text-[10px] text-slate-500 truncate max-w-xs">{item.url}</p>
+                              </div>
+                            </td>
+                            
+                            <td className="py-3.5 px-4 font-semibold">
+                              {item.seo_score !== null ? `${item.seo_score}%` : <span className="text-slate-600 italic">No data</span>}
+                            </td>
+
+                            <td className="py-3.5 px-4 font-semibold">
+                              {item.trust_score !== null ? `${item.trust_score}%` : <span className="text-slate-600 italic">No data</span>}
+                            </td>
+
+                            <td className="py-3.5 px-4 font-bold text-emerald-400">
+                              {item.combined_score !== null ? `${item.combined_score}%` : <span className="text-slate-600 italic">No data</span>}
+                            </td>
+
+                            <td className="py-3.5 px-4 text-right">
+                              <Button
+                                onClick={() => navigate(`/dashboard/sites/${item.id}`)}
+                                variant="outline"
+                                size="sm"
+                                className="h-7 text-[10px] border-slate-800 hover:bg-slate-800 hover:text-slate-100"
+                              >
+                                View Details
+                              </Button>
+                            </td>
+                          </tr>
+                        )
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </Card>
+
             </div>
           )}
 

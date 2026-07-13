@@ -20,7 +20,7 @@ export default function Sidebar({ activeTab }: SidebarProps) {
   return (
     <>
       {/* DESKTOP SIDEBAR (Visible on md and up) */}
-      <aside className="hidden md:flex w-64 bg-slate-900 border-r border-slate-800 flex-col justify-between p-6 shrink-0 min-h-screen">
+      <aside className="hidden md:flex w-64 bg-[#0b0f19] border-r border-slate-900/80 flex-col justify-between p-6 shrink-0 min-h-screen">
         <div className="space-y-8">
           <div className="flex items-center gap-2 cursor-pointer" onClick={() => navigate('/')}>
             <Activity className="h-6 w-6 text-emerald-400" aria-hidden="true" />
@@ -89,7 +89,7 @@ export default function Sidebar({ activeTab }: SidebarProps) {
           </nav>
         </div>
 
-        <div className="mt-8 pt-6 border-t border-slate-800 space-y-4">
+        <div className="mt-8 pt-6 border-t border-slate-900/80 space-y-4">
           <div className="px-3">
             <p className="text-xs text-slate-500">Logged in as</p>
             <p className="text-sm font-medium text-slate-300 truncate" title={user?.email || ''}>
@@ -109,7 +109,7 @@ export default function Sidebar({ activeTab }: SidebarProps) {
       </aside>
 
       {/* MOBILE HEADER (Visible on screens smaller than md) */}
-      <header className="flex md:hidden w-full bg-slate-900 border-b border-slate-800 p-4 items-center justify-between sticky top-0 z-50">
+      <header className="flex md:hidden w-full bg-[#0b0f19] border-b border-slate-900/80 p-4 items-center justify-between sticky top-0 z-50">
         <div className="flex items-center gap-1.5 cursor-pointer" onClick={() => navigate('/')}>
           <Activity className="h-5 w-5 text-emerald-400" aria-hidden="true" />
           <span className="text-sm font-bold bg-gradient-to-r from-emerald-400 to-amber-400 bg-clip-text text-transparent">
@@ -172,7 +172,7 @@ export default function Sidebar({ activeTab }: SidebarProps) {
             <Settings className="h-4.5 w-4.5" />
           </button>
           
-          <span className="w-px h-5 bg-slate-800 mx-1" />
+          <span className="w-px h-5 bg-slate-900/80 mx-1" />
 
           <button 
             onClick={handleLogout}
