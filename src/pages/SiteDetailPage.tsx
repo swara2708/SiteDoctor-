@@ -821,7 +821,6 @@ export default function SiteDetailPage() {
                                     title={rawTitle}
                                     description={rawDesc}
                                     displayUrl={displayUrl}
-                                    url={pageUrl}
                                     truncate={truncate}
                                     desktopTitleMax={DESKTOP_TITLE_MAX}
                                     desktopDescMax={DESKTOP_DESC_MAX}
@@ -1355,10 +1354,10 @@ function GooglePreviewToggle() {
 }
 
 function GooglePreviewPanel({
-  title, description, displayUrl, url, truncate,
+  title, description, displayUrl, truncate,
   desktopTitleMax, desktopDescMax, mobileTitleMax, mobileDescMax
 }: {
-  title: string; description: string; displayUrl: string; url: string
+  title: string; description: string; displayUrl: string
   truncate: (s: string, n: number) => string
   desktopTitleMax: number; desktopDescMax: number; mobileTitleMax: number; mobileDescMax: number
 }) {
