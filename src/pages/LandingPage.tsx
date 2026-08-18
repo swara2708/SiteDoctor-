@@ -1,14 +1,16 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { Card, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import {
-  Activity, ShieldAlert, Eye, TrendingUp, ArrowRight, CheckCircle2, Loader2,
-  ChevronDown, Globe, Search, FileText, Shield, BarChart3, Zap, Download,
-  Star, AlertTriangle, Image as ImageIcon
+  Activity, ShieldAlert, Eye, TrendingUp, ArrowRight, CheckCircle2,
+  ChevronDown, Search, Shield, BarChart3, Zap,
+  Star, AlertTriangle
 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import AnimatedNumber from '../components/AnimatedNumber'
+import Aurora from '../components/ui/Aurora'
+import AccordionGallery, { type AccordionGalleryItem } from '../components/ui/AccordionGallery'
 
 // ─── FAQ DATA ───────────────────────────────────────────────
 const FAQ_ITEMS = [
@@ -97,43 +99,6 @@ function FAQItem({ q, a, isOpen, onClick }: { q: string; a: string; isOpen: bool
   )
 }
 
-// ─── PIPELINE STEP ──────────────────────────────────────────
-function PipelineStep({
-  step, icon: Icon, title, desc, color, delay
-}: {
-  step: string; icon: any; title: string; desc: string; color: 'emerald' | 'amber'; delay: number
-}) {
-  const isEmerald = color === 'emerald'
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 24 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true, margin: '-80px' }}
-      transition={{ duration: 0.5, delay }}
-      className={`flex flex-col items-center text-center p-6 rounded-2xl border relative overflow-hidden group
-        ${isEmerald
-          ? 'bg-emerald-500/5 border-emerald-500/20 hover:border-emerald-500/40'
-          : 'bg-amber-500/5 border-amber-500/20 hover:border-amber-500/40'
-        } transition-all duration-300`}
-    >
-      {/* Step number watermark */}
-      <span className={`text-7xl font-black absolute -top-3 -left-1 select-none pointer-events-none
-        ${isEmerald ? 'text-emerald-500/10' : 'text-amber-500/10'}`}>
-        {step}
-      </span>
-
-      {/* Icon ring */}
-      <div className={`h-14 w-14 rounded-2xl flex items-center justify-center mb-4 z-10 group-hover:scale-110 transition-transform duration-300
-        ${isEmerald ? 'bg-emerald-500/15 text-emerald-400' : 'bg-amber-500/15 text-amber-400'}`}>
-        <Icon className="h-7 w-7" />
-      </div>
-
-      <h3 className="text-base font-bold mb-2 z-10">{title}</h3>
-      <p className="text-sm text-slate-400 leading-relaxed z-10">{desc}</p>
-    </motion.div>
-  )
-}
-
 // ─── MINI SCORE CARD ────────────────────────────────────────
 function MiniScoreCard({ label, score, grade, gradeColor, icon: Icon, iconColor }: {
   label: string; score: number; grade: string;
@@ -173,138 +138,49 @@ function MiniScoreCard({ label, score, grade, gradeColor, icon: Icon, iconColor 
   )
 }
 
-// ─── APP PREVIEW TABS ───────────────────────────────────────
-const PREVIEW_TABS = [
-  {
-    id: 'dashboard',
-    label: 'My Websites',
-    desc: 'Track all your websites in one place. Score rings show SEO, Trust, and Site Health at a glance.',
-    img: '/ss_dashboard.png',
-  },
-  {
-    id: 'analytics',
-    label: 'Analytics',
-    desc: 'View trend charts and cross-site comparisons. Spot which sites need attention before rankings drop.',
-    img: '/ss_analytics.png',
-  },
-  {
-    id: 'detail',
-    label: 'Audit Report',
-    desc: 'Drill into full SEO, Trust, and Image audit results for any site. Download a PDF in one click.',
-    img: '/ss_site_detail.png',
-  },
-]
 
-function AppPreviewTabs() {
-  const [active, setActive] = useState('dashboard')
-  const current = PREVIEW_TABS.find(t => t.id === active)!
-
-  return (
-    <div>
-      {/* Tab pills */}
-      <div className="flex justify-center gap-2 mb-8 flex-wrap">
-        {PREVIEW_TABS.map(tab => (
-          <button
-            key={tab.id}
-            onClick={() => setActive(tab.id)}
-            className={`px-4 py-2 rounded-full text-sm font-semibold border transition-all duration-200 ${
-              active === tab.id
-                ? 'bg-emerald-500 text-slate-950 border-emerald-500 shadow-lg shadow-emerald-500/20'
-                : 'bg-transparent text-slate-400 border-slate-700 hover:border-slate-500 hover:text-slate-200'
-            }`}
-          >
-            {tab.label}
-          </button>
-        ))}
-      </div>
-
-      {/* Screenshot frame */}
-      <AnimatePresence mode="wait">
-        <motion.div
-          key={active}
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -8 }}
-          transition={{ duration: 0.3 }}
-          className="max-w-5xl mx-auto"
-        >
-          {/* Browser chrome bar */}
-          <div className="bg-slate-800 rounded-t-xl px-4 py-2.5 flex items-center gap-2 border border-slate-700 border-b-0">
-            <span className="h-3 w-3 rounded-full bg-red-500/80" />
-            <span className="h-3 w-3 rounded-full bg-amber-500/80" />
-            <span className="h-3 w-3 rounded-full bg-emerald-500/80" />
-            <div className="flex-1 mx-4 bg-slate-900 rounded-md px-3 py-1 text-[11px] text-slate-500 font-mono text-center">
-              app.sitedoctor-plus.vercel.app
-            </div>
-          </div>
-
-          {/* Screenshot */}
-          <div className="border border-slate-700 border-t-0 rounded-b-xl overflow-hidden shadow-2xl shadow-black/60">
-            <img
-              src={current.img}
-              alt={current.label}
-              className="w-full object-cover object-top"
-              style={{ maxHeight: '520px' }}
-            />
-          </div>
-
-          {/* Caption */}
-          <motion.p
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.4, delay: 0.2 }}
-            className="text-center text-sm text-slate-400 mt-5 max-w-xl mx-auto"
-          >
-            {current.desc}
-          </motion.p>
-        </motion.div>
-      </AnimatePresence>
-    </div>
-  )
-}
 
 export default function LandingPage() {
-  const [demoUrl, setDemoUrl] = useState('')
-  const [demoState, setDemoState] = useState<'idle' | 'scanning' | 'completed'>('idle')
-  const [scanStep, setScanStep] = useState(0)
-  const [progress, setProgress] = useState(0)
   const [openFaq, setOpenFaq] = useState<number | null>(null)
 
-  const scanSteps = [
-    'Initializing secure diagnostic scanner...',
-    'Auditing meta tags and header hierarchies...',
-    'Performing Groq AI content credibility scans...',
-    'Analyzing visual asset compression & metadata...',
-    'Compiling final health index scores...'
-  ]
-
-  useEffect(() => {
-    let interval: any
-    if (demoState === 'scanning') {
-      interval = setInterval(() => {
-        setProgress((prev) => {
-          if (prev >= 100) {
-            clearInterval(interval)
-            setDemoState('completed')
-            return 100
-          }
-          const next = prev + 1.25
-          const stepIndex = Math.min(Math.floor((next / 100) * scanSteps.length), scanSteps.length - 1)
-          setScanStep(stepIndex)
-          return next
-        })
-      }, 25)
+  const pipelineSteps: AccordionGalleryItem[] = [
+    {
+      image: '/step1.png',
+      step: 'STEP 01',
+      label: 'Enter Website URL',
+      desc: 'Start by entering the website you want to analyze.'
+    },
+    {
+      image: '/step2.png',
+      step: 'STEP 02',
+      label: 'SEO Audit',
+      desc: "We analyze 50+ SEO factors to check your website's performance."
+    },
+    {
+      image: '/step3.png',
+      step: 'STEP 03',
+      label: 'AI Trust Scan',
+      desc: 'Our AI scans your content for trust, credibility & E-E-A-T signals.'
+    },
+    {
+      image: '/step4.png',
+      step: 'STEP 04',
+      label: 'Visual Analysis',
+      desc: 'We analyze design, UX, and visual elements of your website.'
+    },
+    {
+      image: '/step5.png',
+      step: 'STEP 05',
+      label: 'Export Report',
+      desc: 'Download your detailed report in multiple formats.'
+    },
+    {
+      image: '/step6.png',
+      step: 'STEP 06',
+      label: 'Actionable Insights',
+      desc: 'Get clear insights and recommendations to improve your website.'
     }
-    return () => clearInterval(interval)
-  }, [demoState])
-
-  const handleDemoScan = (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!demoUrl.trim()) return
-    setProgress(0)
-    setScanStep(0)
-    setDemoState('scanning')
-  }
+  ]
 
   return (
     <motion.div
@@ -327,7 +203,6 @@ export default function LandingPage() {
           <nav className="hidden md:flex items-center gap-6 text-sm font-medium text-slate-400">
             <a href="#features" className="hover:text-emerald-400 transition-colors">Features</a>
             <a href="#how-it-works" className="hover:text-emerald-400 transition-colors">How It Works</a>
-            <a href="#preview" className="hover:text-emerald-400 transition-colors">Preview</a>
             <a href="#pricing" className="hover:text-emerald-400 transition-colors">Pricing</a>
             <a href="#faq" className="hover:text-emerald-400 transition-colors">FAQ</a>
           </nav>
@@ -347,20 +222,30 @@ export default function LandingPage() {
 
       {/* 2. HERO SECTION */}
       <section className="relative overflow-hidden pt-20 pb-16 lg:pt-32 lg:pb-24">
+        {/* React Bits Aurora Background */}
+        <div className="absolute inset-0 z-0 opacity-75 pointer-events-none">
+          <Aurora
+            colorStops={["#10b981", "#7cff67", "#059669"]}
+            blend={0.5}
+            amplitude={1.0}
+            speed={0.5}
+          />
+        </div>
+
         {/* Background glow effects */}
         <motion.div
-          className="absolute top-1/4 left-1/2 -z-10 h-[300px] w-[300px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-emerald-500/10 blur-[100px] sm:h-[400px] sm:w-[400px]"
+          className="absolute top-1/4 left-1/2 z-0 h-[300px] w-[300px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-emerald-500/10 blur-[100px] sm:h-[400px] sm:w-[400px] pointer-events-none"
           animate={{ scale: [1, 1.15, 0.9, 1], x: ['-50%', '-45%', '-55%', '-50%'], y: ['-50%', '-55%', '-45%', '-50%'] }}
           transition={{ duration: 12, repeat: Infinity, repeatType: 'reverse', ease: 'easeInOut' }}
         />
         <motion.div
-          className="absolute top-1/3 left-1/3 -z-10 h-[250px] w-[250px] rounded-full bg-amber-500/5 blur-[80px]"
+          className="absolute top-1/3 left-1/3 z-0 h-[250px] w-[250px] rounded-full bg-amber-500/5 blur-[80px] pointer-events-none"
           animate={{ scale: [1, 0.85, 1.15, 1], x: [0, 20, -15, 0], y: [0, -30, 25, 0] }}
           transition={{ duration: 16, repeat: Infinity, repeatType: 'reverse', ease: 'easeInOut' }}
         />
 
         <motion.div
-          className="container mx-auto px-4 sm:px-6 lg:px-8 text-center max-w-4xl"
+          className="container mx-auto px-4 sm:px-6 lg:px-8 text-center max-w-4xl relative z-10"
           initial="hidden" animate="visible"
           variants={{ hidden: { opacity: 0 }, visible: { opacity: 1, transition: { staggerChildren: 0.15 } } }}
         >
@@ -397,106 +282,6 @@ export default function LandingPage() {
                 <a href="#features">Explore Features</a>
               </Button>
             </motion.div>
-          </motion.div>
-
-          {/* INTERACTIVE DEMO SCANNER BOX */}
-          <motion.div
-            initial={{ opacity: 0, y: 35 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.35 }}
-            className="mt-16 max-w-xl mx-auto p-5 rounded-2xl border border-slate-800/85 bg-slate-900/40 backdrop-blur-md shadow-2xl relative overflow-hidden text-left"
-          >
-            <div className="absolute inset-0 bg-emerald-500/[0.01] pointer-events-none" />
-
-            {demoState === 'idle' && (
-              <form onSubmit={handleDemoScan} className="space-y-4">
-                <div className="text-left space-y-1">
-                  <h3 className="text-xs font-black text-emerald-450 uppercase tracking-wider">Try SiteDoctor+ instantly</h3>
-                  <p className="text-[11px] text-slate-400">Input a URL below to run a mock AI diagnostics audit right now.</p>
-                </div>
-                <div className="flex flex-col sm:flex-row gap-2">
-                  <input
-                    type="url" required placeholder="https://example.com"
-                    value={demoUrl} onChange={(e) => setDemoUrl(e.target.value)}
-                    className="flex-1 bg-slate-950/85 border border-slate-800 rounded-lg px-3 py-2 text-xs text-slate-200 placeholder-slate-650 outline-none focus:border-emerald-500/60 focus:ring-1 focus:ring-emerald-500/20 transition-all font-mono"
-                  />
-                  <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-                    <Button type="submit" className="w-full sm:w-auto bg-emerald-500 text-slate-950 font-bold hover:bg-emerald-400 text-xs px-5 h-9">
-                      Analyze URL
-                    </Button>
-                  </motion.div>
-                </div>
-              </form>
-            )}
-
-            {demoState === 'scanning' && (
-              <div className="py-6 space-y-5 text-center">
-                <div className="relative mx-auto w-12 h-12 flex items-center justify-center">
-                  <Loader2 className="h-8 w-8 animate-spin text-emerald-400 z-10" />
-                  <div className="absolute inset-0 bg-emerald-500/10 rounded-full blur-md animate-ping" />
-                </div>
-                <div className="space-y-2">
-                  <p className="text-xs font-mono text-emerald-400 animate-pulse">{scanSteps[scanStep]}</p>
-                  <div className="w-48 bg-slate-850 h-1 rounded-full mx-auto overflow-hidden">
-                    <motion.div className="bg-emerald-400 h-full" style={{ width: `${progress}%` }} />
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {demoState === 'completed' && (
-              <motion.div
-                initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
-                transition={{ duration: 0.3 }} className="space-y-5 text-left"
-              >
-                <div className="flex items-center justify-between border-b border-slate-800/60 pb-3">
-                  <div>
-                    <span className="text-[10px] text-emerald-400 font-extrabold uppercase tracking-wider block">Demo Report</span>
-                    <span className="text-xs font-mono text-slate-350 font-bold truncate max-w-xs block sm:inline">{demoUrl}</span>
-                  </div>
-                  <Button onClick={() => setDemoState('idle')} variant="ghost" className="h-7 text-[10px] text-slate-400 hover:text-slate-200 border border-slate-800 px-3">
-                    Reset
-                  </Button>
-                </div>
-
-                <div className="grid grid-cols-3 gap-2 py-1 bg-slate-950/20 border border-slate-850/50 rounded-xl p-3">
-                  <DemoProgressRing value={88} label="SEO score" colorClass="stroke-emerald-400" />
-                  <DemoProgressRing value={55} label="Trust score" colorClass="stroke-amber-500" />
-                  <DemoProgressRing value={68} label="Health Index" colorClass="stroke-amber-400" />
-                </div>
-
-                <div className="space-y-2">
-                  <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Mock Diagnostics</span>
-                  <div className="space-y-1.5">
-                    <div className="bg-slate-950/40 border border-slate-850/60 rounded-lg p-2.5 flex items-start gap-2.5">
-                      <span className="text-[8px] uppercase tracking-wider font-extrabold px-1.5 py-0.2 rounded border bg-red-500/10 text-red-400 border-red-500/20 shrink-0 mt-0.5">High</span>
-                      <div>
-                        <p className="text-[11px] font-bold text-slate-200">Missing descriptive Meta Description</p>
-                        <p className="text-[10px] text-slate-400 mt-0.5">Fix: Add a descriptive meta tag between 150-160 characters long.</p>
-                      </div>
-                    </div>
-                    <div className="bg-slate-950/40 border border-slate-850/60 rounded-lg p-2.5 flex items-start gap-2.5">
-                      <span className="text-[8px] uppercase tracking-wider font-extrabold px-1.5 py-0.2 rounded border bg-amber-500/10 text-amber-400 border-amber-500/20 shrink-0 mt-0.5">Medium</span>
-                      <div>
-                        <p className="text-[11px] font-bold text-slate-200">Deceptive/AI-generated text detected</p>
-                        <p className="text-[10px] text-slate-400 mt-0.5">Fix: Rewrite generic introductions using a more authentic tone of voice.</p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="pt-2.5 border-t border-slate-800/40 flex flex-col sm:flex-row items-center justify-between gap-3">
-                  <span className="text-[10px] text-slate-500 leading-normal">Sign up to run real scans and optimize your website live.</span>
-                  <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }} className="w-full sm:w-auto shrink-0">
-                    <Button className="w-full sm:w-auto bg-gradient-to-r from-emerald-500 to-teal-500 text-slate-950 font-bold hover:opacity-95 text-xs px-4 h-8" asChild>
-                      <Link to="/signup" className="inline-flex items-center gap-1.5">
-                        Claim Your Free Account <ArrowRight className="h-3 w-3" />
-                      </Link>
-                    </Button>
-                  </motion.div>
-                </div>
-              </motion.div>
-            )}
           </motion.div>
         </motion.div>
       </section>
@@ -614,47 +399,18 @@ export default function LandingPage() {
             </p>
           </div>
 
-          {/* Visual pipeline — 5 steps */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 items-stretch">
-            <PipelineStep step="01" icon={Globe} title="Add Your URL" desc="Register your domain in the dashboard and give it a nickname." color="emerald" delay={0} />
-
-            {/* Arrow connector */}
-            <div className="hidden lg:flex items-center justify-center">
-              <motion.div
-                className="h-0.5 w-full bg-gradient-to-r from-emerald-500/40 to-amber-500/40"
-                initial={{ scaleX: 0 }} whileInView={{ scaleX: 1 }} viewport={{ once: true }}
-                transition={{ duration: 0.6, delay: 0.2 }}
-              />
-            </div>
-
-            <PipelineStep step="02" icon={Search} title="SEO Audit" desc="We crawl your HTML and check 12+ technical SEO indicators instantly." color="emerald" delay={0.1} />
-
-            <div className="hidden lg:flex items-center justify-center">
-              <motion.div
-                className="h-0.5 w-full bg-gradient-to-r from-emerald-500/40 to-amber-500/40"
-                initial={{ scaleX: 0 }} whileInView={{ scaleX: 1 }} viewport={{ once: true }}
-                transition={{ duration: 0.6, delay: 0.35 }}
-              />
-            </div>
-
-            <PipelineStep step="03" icon={FileText} title="AI Trust Scan" desc="Groq LLMs evaluate your copywriting for authenticity and credibility." color="amber" delay={0.2} />
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 items-stretch mt-4">
-            <PipelineStep step="04" icon={ImageIcon} title="Vision Analysis" desc="Each image is checked for stock photo use, broken links, and quality." color="amber" delay={0.3} />
-
-            <div className="hidden lg:flex items-center justify-center">
-              <motion.div
-                className="h-0.5 w-full bg-gradient-to-r from-amber-500/40 to-emerald-500/40"
-                initial={{ scaleX: 0 }} whileInView={{ scaleX: 1 }} viewport={{ once: true }}
-                transition={{ duration: 0.6, delay: 0.5 }}
-              />
-            </div>
-
-            <PipelineStep step="05" icon={Download} title="Export Report" desc="Download a full PDF audit with scores, grades, and prioritised fixes." color="emerald" delay={0.4} />
-
-            <div className="hidden lg:flex items-center justify-center" />
-            <div className="hidden lg:flex items-center justify-center" />
+          {/* Interactive Accordion Gallery Steps */}
+          <div className="max-w-6xl mx-auto my-6">
+            <AccordionGallery
+              items={pipelineSteps}
+              defaultIndex={0}
+              expandRatio={0.42}
+              trigger="hover"
+              accentColor="#10b981"
+              height={480}
+              gap={14}
+              radius={18}
+            />
           </div>
 
           {/* What you get strip */}
@@ -680,28 +436,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ── APP PREVIEW SECTION ──────────────────────────────── */}
-      <section id="preview" className="py-20 border-t border-slate-900 bg-slate-950">
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-          <motion.div
-            className="text-center max-w-2xl mx-auto mb-12"
-            initial={{ opacity: 0, y: 16 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.5 }}
-          >
-            <span className="text-xs font-extrabold uppercase tracking-widest text-emerald-400 mb-3 block">See it in action</span>
-            <h2 className="text-3xl font-bold tracking-tight text-slate-100 sm:text-4xl">
-              A Complete Audit Suite, All in One Place
-            </h2>
-            <p className="mt-4 text-slate-400">
-              From score rings to AI trust flags — every page is designed for clarity and instant action.
-            </p>
-          </motion.div>
 
-          <AppPreviewTabs />
-        </div>
-      </section>
 
       {/* 5. ABOUT SECTION */}
       <section id="about" className="py-20 border-t border-slate-900 bg-slate-950/50">
@@ -970,32 +705,5 @@ export default function LandingPage() {
       </footer>
 
     </motion.div>
-  )
-}
-
-function DemoProgressRing({ value, label, colorClass }: { value: number; label: string; colorClass: string }) {
-  const radius = 24
-  const circumference = 2 * Math.PI * radius
-  const strokeDashoffset = circumference - (value / 100) * circumference
-
-  return (
-    <div className="flex flex-col items-center">
-      <div className="relative flex items-center justify-center h-16 w-16">
-        <svg className="absolute transform -rotate-90 w-16 h-16">
-          <circle cx="32" cy="32" r={radius} className="stroke-slate-800" strokeWidth="3.5" fill="transparent" />
-          <motion.circle
-            cx="32" cy="32" r={radius} className={colorClass} strokeWidth="3.5" fill="transparent"
-            strokeDasharray={circumference}
-            initial={{ strokeDashoffset: circumference }}
-            animate={{ strokeDashoffset }}
-            transition={{ duration: 1, ease: 'easeOut' }}
-          />
-        </svg>
-        <span className="text-[12px] font-black text-slate-200">
-          <AnimatedNumber value={value} />
-        </span>
-      </div>
-      <span className="text-[9px] uppercase font-bold tracking-wider text-slate-500 mt-1">{label}</span>
-    </div>
   )
 }

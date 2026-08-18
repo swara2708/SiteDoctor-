@@ -368,9 +368,10 @@ Provide business context about the domain.
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${groqApiKey}`,
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
       },
       body: JSON.stringify({
-        model: 'llama-3.3-70b-versatile',
+        model: 'openai/gpt-oss-120b',
         response_format: { type: 'json_object' },
         messages: [
           {
@@ -412,33 +413,6 @@ Provide business context about the domain.
       throw new Error("Analysis failed, please try again");
     }
 
-    const prepareLocalImageBase64 = async (imgUrl) => {
-      try {
-        const urlObj = new URL(imgUrl);
-        const isLocal = ['localhost', '127.0.0.1', '0.0.0.0'].includes(urlObj.hostname) || 
-                        urlObj.hostname.startsWith('192.168.') || 
-                        urlObj.hostname.startsWith('10.') || 
-                        urlObj.hostname.startsWith('172.');
-
-        if (isLocal) {
-          console.log(`[SiteDoctor+ Debug] Fetching local image for base64 encoding: ${imgUrl}`);
-          const res = await fetch(imgUrl);
-          if (!res.ok) {
-            throw new Error(`Failed to fetch local image. Status: ${res.status}`);
-          }
-          const arrayBuffer = await res.arrayBuffer();
-          const buffer = Buffer.from(arrayBuffer);
-          const base64 = buffer.toString('base64');
-          const contentType = res.headers.get('content-type') || 'image/jpeg';
-          console.log(`[SiteDoctor+ Debug] Successfully converted local image to base64 (size: ${buffer.length} bytes)`);
-          return `data:${contentType};base64,${base64}`;
-        }
-      } catch (err) {
-        console.error(`[SiteDoctor+ Debug] Local base64 conversion failed for ${imgUrl}:`, err.message);
-      }
-      return imgUrl;
-    };
-
     // 4. Run Groq Vision analysis in parallel for the collected images
     console.log(`[SiteDoctor+ Debug] Starting Vision analysis loop for:`, uniqueImages);
     const visionPromises = uniqueImages.map(async (imageUrl) => {
@@ -474,40 +448,27 @@ Provide business context about the domain.
         };
       }
 
-      // Resolve local url to base64 to ensure Groq can read it
-      const payloadUrl = await prepareLocalImageBase64(imageUrl);
-
       try {
         const payload = {
-          model: 'meta-llama/llama-4-scout-17b-16e-instruct',
+          model: 'openai/gpt-oss-120b',
           response_format: { type: 'json_object' },
           messages: [
             {
               role: 'user',
-              content: [
-                {
-                  type: 'text',
-                  text: 'Analyze this image and return a STRICT JSON object containing: "looks_like_stock_photo" (boolean), "reasoning" (string), "quality_flag" (string, one of: "broken", "low-resolution", "placeholder", "normal"), and "relevance_note" (string). Return ONLY the raw JSON object, without code fences or wrappers.',
-                },
-                {
-                  type: 'image_url',
-                  image_url: {
-                    url: payloadUrl,
-                  },
-                },
-              ],
+              content: `Analyze image URL ${imageUrl} for a website quality audit. Return a STRICT JSON object containing: "looks_like_stock_photo" (boolean), "reasoning" (string), "quality_flag" (string, one of: "broken", "low-resolution", "placeholder", "normal"), and "relevance_note" (string). Return ONLY the raw JSON object.`,
             },
           ],
           temperature: 0.1,
         };
 
-        console.log(`[SiteDoctor+ Debug] Sending Groq Vision request payload for image: ${imageUrl} (payloadUrl is ${payloadUrl.startsWith('data:') ? 'base64' : 'public url'})`);
+        console.log(`[SiteDoctor+ Debug] Sending Groq Vision request payload for image: ${imageUrl}`);
 
         const visionResponse = await fetch('https://api.groq.com/openai/v1/chat/completions', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${groqApiKey}`,
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
           },
           body: JSON.stringify(payload),
         });

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
+import { useToast } from '../components/ui/toast'
 import { supabase } from '../lib/supabaseClient'
 import Sidebar from '../components/Sidebar'
 import { Button } from '../components/ui/button'
@@ -18,6 +19,9 @@ import {
   ChevronUp,
   AlertCircle,
   ArrowUpDown,
+  Filter,
+  BarChart3,
+  PieChart as PieIcon
 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import AnimatedNumber from '../components/AnimatedNumber'
@@ -81,9 +85,31 @@ interface Site {
   scans?: Scan[]
 }
 
+// Custom Tooltip Component for Recharts
+function CustomChartTooltip({ active, payload, label }: any) {
+  if (active && payload && payload.length) {
+    return (
+      <div className="bg-[#0f172a]/95 border border-slate-700/80 rounded-xl p-3 shadow-2xl backdrop-blur-md text-xs space-y-1.5 min-w-[140px]">
+        <p className="font-bold text-slate-200 border-b border-slate-800 pb-1">{label}</p>
+        {payload.map((entry: any, index: number) => (
+          <div key={`item-${index}`} className="flex items-center justify-between gap-3 text-slate-300">
+            <div className="flex items-center gap-1.5">
+              <span className="h-2 w-2 rounded-full" style={{ backgroundColor: entry.color || entry.fill }} />
+              <span className="font-medium text-slate-400">{entry.name}:</span>
+            </div>
+            <span className="font-extrabold text-slate-100">{entry.value}%</span>
+          </div>
+        ))}
+      </div>
+    )
+  }
+  return null
+}
+
 export default function AnalyticsPage() {
   useAuth()
   const navigate = useNavigate()
+  const toast = useToast()
 
   const [sites, setSites] = useState<Site[]>([])
   const [loading, setLoading] = useState(true)
@@ -162,6 +188,7 @@ export default function AnalyticsPage() {
       setSites(data || [])
     } catch (err: any) {
       setErrorMsg(err.message || 'Failed to load analytics data.')
+      toast.error('Data Error', 'Failed to load analytics data.')
     } finally {
       setLoading(false)
     }
@@ -188,12 +215,10 @@ export default function AnalyticsPage() {
   const totalScans = allScansInScope.length
   const totalSites = filteredSites.length
 
-  // Calculate Average Combined Score
   const avgCombined = totalScans > 0
     ? Math.round(allScansInScope.reduce((sum, s) => sum + (s.combined_score || 0), 0) / totalScans)
     : 0
 
-  // Calculate Most Recent Scan Date
   const mostRecentDate = totalScans > 0
     ? new Date(
         Math.max(...allScansInScope.map(s => new Date(s.scanned_at).getTime()))
@@ -201,12 +226,9 @@ export default function AnalyticsPage() {
     : 'N/A'
 
   // Chart 1: Site Health Index Over Time
-  // Resolves aggregate average by date if "All Sites", or specific timeline if single site.
-  // Grouping by date YYYY-MM-DD makes dates clean.
   const getLineChartData = () => {
     if (sortedScans.length === 0) return []
 
-    // Group by date string
     const groups: Record<string, { sum: number; count: number }> = {}
     sortedScans.forEach(scan => {
       const dateStr = new Date(scan.scanned_at).toLocaleDateString(undefined, {
@@ -229,7 +251,6 @@ export default function AnalyticsPage() {
   // Chart 2: SEO vs Trust Score Comparison
   const getBarChartData = () => {
     if (selectedSiteId === 'all') {
-      // Comparison across sites (using latest scan for each site)
       return sites.map(site => {
         const latestScan = site.scans && site.scans.length > 0
           ? [...site.scans].sort(
@@ -244,7 +265,6 @@ export default function AnalyticsPage() {
         }
       }).filter(d => d.SEO > 0 || d.Trust > 0)
     } else {
-      // For a specific site: show SEO vs Trust over time
       return sortedScans.map(scan => ({
         name: new Date(scan.scanned_at).toLocaleDateString(undefined, {
           month: 'short',
@@ -263,7 +283,6 @@ export default function AnalyticsPage() {
     let low = 0
 
     allScansInScope.forEach(scan => {
-      // SEO Issues count by severity
       if (scan.seo_report && scan.seo_report.issues) {
         scan.seo_report.issues.forEach(issue => {
           const sev = (issue.severity || '').toLowerCase()
@@ -273,16 +292,15 @@ export default function AnalyticsPage() {
         })
       }
 
-      // Trust flags are credibility concerns and are always classified as critical/high impact.
       if (scan.trust_report && scan.trust_report.flags) {
         high += scan.trust_report.flags.length
       }
     })
 
     return [
-      { name: 'High Risk (SEO High + Credibility)', value: high, color: '#ef4444' }, // Red
-      { name: 'Medium Severity', value: medium, color: '#f59e0b' }, // Amber
-      { name: 'Low/Informational', value: low, color: '#10b981' }, // Mint-teal
+      { name: 'High Risk / Credibility', value: high, color: '#ef4444' },
+      { name: 'Medium Severity', value: medium, color: '#f59e0b' },
+      { name: 'Low / Informational', value: low, color: '#10b981' },
     ].filter(d => d.value > 0)
   }
 
@@ -293,55 +311,64 @@ export default function AnalyticsPage() {
   const hasAnyScans = sites.some(s => s.scans && s.scans.length > 0)
 
   return (
-    <motion.div 
+    <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      transition={{ duration: 0.3 }}
-      className="min-h-screen bg-[#030712] text-slate-100 flex flex-col md:flex-row font-sans"
+      transition={{ duration: 0.25 }}
+      className="min-h-screen bg-[#070a12] text-slate-100 flex flex-col md:flex-row font-sans"
     >
-      
       {/* SIDEBAR NAVIGATION */}
       <Sidebar activeTab="analytics" />
 
       {/* MAIN CONTENT AREA */}
-      <main className="flex-1 p-6 md:p-8 overflow-y-auto">
-        <div className="max-w-5xl mx-auto space-y-8">
+      <main className="flex-1 p-5 md:p-8 overflow-y-auto">
+        <div className="max-w-6xl mx-auto space-y-8">
           
           {/* HEADER & FILTER */}
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-2 border-b border-slate-900/80">
             <div>
-              <h1 className="text-3xl font-extrabold tracking-tight text-slate-100">Analytics</h1>
-              <p className="text-sm text-slate-400 mt-1">Diagnostic summaries and comparative indicators.</p>
+              <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight text-slate-100 flex items-center gap-3">
+                Analytics
+                <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                  Insights
+                </span>
+              </h1>
+              <p className="text-xs md:text-sm text-slate-400 mt-1">
+                Aggregate health index metrics, technical SEO breakdowns, and trust score analytics.
+              </p>
             </div>
-            
+
             {/* SITE FILTER DROPDOWN */}
             <div className="relative shrink-0 w-full sm:w-64">
-              <select
-                value={selectedSiteId}
-                onChange={(e) => setSelectedSiteId(e.target.value)}
-                className="w-full bg-slate-900 border border-slate-800 rounded-md px-3 py-2 text-sm text-slate-200 outline-none focus:ring-1 focus:ring-emerald-500 cursor-pointer appearance-none"
-              >
-                <option value="all">All Websites</option>
-                {sites.map(site => (
-                  <option key={site.id} value={site.id}>
-                    {site.nickname || site.url.replace(/^https?:\/\//i, '')}
-                  </option>
-                ))}
-              </select>
-              <ChevronDown className="absolute right-3 top-3 h-4 w-4 text-slate-500 pointer-events-none" />
+              <div className="flex items-center gap-2 bg-slate-900/80 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-200">
+                <Filter className="h-3.5 w-3.5 text-emerald-400 shrink-0" />
+                <select
+                  value={selectedSiteId}
+                  onChange={(e) => setSelectedSiteId(e.target.value)}
+                  className="w-full bg-transparent text-slate-200 outline-none cursor-pointer appearance-none text-xs font-semibold"
+                >
+                  <option value="all" className="bg-slate-900">All Websites ({sites.length})</option>
+                  {sites.map(site => (
+                    <option key={site.id} value={site.id} className="bg-slate-900">
+                      {site.nickname || site.url.replace(/^https?:\/\//i, '')}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown className="h-3.5 w-3.5 text-slate-400 shrink-0 pointer-events-none" />
+              </div>
             </div>
           </div>
 
           {/* STATUS BLOCK */}
           <AnimatePresence>
             {errorMsg && (
-              <motion.div 
-                initial={{ opacity: 0, y: -15 }}
+              <motion.div
+                initial={{ opacity: 0, y: -10 }}
                 animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -15 }}
-                transition={{ duration: 0.25 }}
-                className="bg-red-500/10 border border-red-500/30 text-red-400 px-4 py-3 rounded-lg text-sm flex items-start gap-2"
+                exit={{ opacity: 0, y: -10 }}
+                transition={{ duration: 0.2 }}
+                className="bg-red-500/10 border border-red-500/30 text-red-400 px-4 py-3 rounded-xl text-xs sm:text-sm flex items-start gap-2.5"
               >
                 <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
                 <span>{errorMsg}</span>
@@ -355,17 +382,19 @@ export default function AnalyticsPage() {
             </div>
           ) : !hasAnyScans ? (
             /* EMPTY STATE */
-            <div className="text-center py-16 border border-dashed border-slate-800 rounded-2xl bg-slate-900/10 max-w-xl mx-auto">
-              <TrendingUp className="h-12 w-12 text-slate-600 mx-auto mb-4" />
-              <h3 className="text-lg font-semibold text-slate-300">No scan history found</h3>
-              <p className="text-sm text-slate-500 mt-2 max-w-sm mx-auto">
-                Once you run a health scan on your properties, the diagnostic trends, comparison metrics, and severity analyses will appear here.
+            <div className="text-center py-20 border border-dashed border-slate-800/80 rounded-2xl bg-slate-900/20 max-w-xl mx-auto px-6">
+              <div className="h-14 w-14 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center mx-auto mb-4 text-emerald-400">
+                <TrendingUp className="h-7 w-7" />
+              </div>
+              <h3 className="text-lg font-bold text-slate-200">No scan history recorded</h3>
+              <p className="text-xs text-slate-400 mt-2 max-w-sm mx-auto leading-relaxed">
+                Once you run AI diagnostics on your properties, historical line trends, SEO vs Trust charts, and severity breakdowns will appear here.
               </p>
-              <Button 
+              <Button
                 onClick={() => navigate('/dashboard')}
-                className="mt-6 bg-emerald-500 text-slate-950 font-bold hover:bg-emerald-400 inline-flex items-center gap-2"
+                className="mt-6 bg-emerald-500 text-slate-950 font-bold hover:bg-emerald-400 px-5 py-2.5 shadow-lg shadow-emerald-500/10 inline-flex items-center gap-2"
               >
-                <Play className="h-3.5 w-3.5" /> Go to My Sites to scan
+                <Play className="h-4 w-4" /> Go to Sites & Run Scan
               </Button>
             </div>
           ) : (
@@ -373,81 +402,103 @@ export default function AnalyticsPage() {
             <div className="space-y-8 animate-fade-in">
               
               {/* SUMMARY STAT CARDS */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                <Card className="bg-[#0b0f19] border-slate-900/80 text-slate-100 p-4">
-                  <div className="flex items-center justify-between">
-                    <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">Tracked Sites</p>
-                    <Globe className="h-4 w-4 text-slate-650" />
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="p-4 rounded-xl bg-slate-900/40 border border-slate-800/80 flex flex-col justify-between hover:border-slate-700/60 transition-colors">
+                  <div className="flex items-center justify-between text-slate-400">
+                    <span className="text-xs font-medium">Tracked Sites</span>
+                    <Globe className="h-4 w-4 text-emerald-400" />
                   </div>
-                  <p className="text-2xl font-extrabold mt-2 text-slate-200">
-                    <AnimatedNumber value={totalSites} />
-                  </p>
-                </Card>
-                <Card className="bg-[#0b0f19] border-slate-900/80 text-slate-100 p-4">
-                  <div className="flex items-center justify-between">
-                    <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">Total Scans</p>
-                    <FileText className="h-4 w-4 text-slate-650" />
+                  <div className="mt-3 flex items-baseline justify-between">
+                    <span className="text-2xl font-black text-slate-100">
+                      <AnimatedNumber value={totalSites} />
+                    </span>
+                    <span className="text-[10px] text-slate-500 uppercase tracking-wider">Scope</span>
                   </div>
-                  <p className="text-2xl font-extrabold mt-2 text-slate-200">
-                    <AnimatedNumber value={totalScans} />
-                  </p>
-                </Card>
-                <Card className="bg-[#0b0f19] border-slate-900/80 text-slate-100 p-4">
-                  <div className="flex items-center justify-between">
-                    <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">Avg Index</p>
+                </div>
+
+                <div className="p-4 rounded-xl bg-slate-900/40 border border-slate-800/80 flex flex-col justify-between hover:border-slate-700/60 transition-colors">
+                  <div className="flex items-center justify-between text-slate-400">
+                    <span className="text-xs font-medium">Total Audits</span>
+                    <FileText className="h-4 w-4 text-sky-400" />
+                  </div>
+                  <div className="mt-3 flex items-baseline justify-between">
+                    <span className="text-2xl font-black text-slate-100">
+                      <AnimatedNumber value={totalScans} />
+                    </span>
+                    <span className="text-[10px] text-sky-400 font-bold bg-sky-500/10 px-1.5 py-0.5 rounded">
+                      Scans
+                    </span>
+                  </div>
+                </div>
+
+                <div className="p-4 rounded-xl bg-slate-900/40 border border-slate-800/80 flex flex-col justify-between hover:border-slate-700/60 transition-colors">
+                  <div className="flex items-center justify-between text-slate-400">
+                    <span className="text-xs font-medium">Avg Combined Index</span>
                     <Activity className="h-4 w-4 text-emerald-400" />
                   </div>
-                  <p className="text-2xl font-extrabold mt-2 text-emerald-400">
-                    <AnimatedNumber value={avgCombined} />%
-                  </p>
-                </Card>
-                <Card className="bg-[#0b0f19] border-slate-900/80 text-slate-100 p-4">
-                  <div className="flex items-center justify-between">
-                    <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">Latest Scan</p>
-                    <Calendar className="h-4 w-4 text-slate-650" />
+                  <div className="mt-3 flex items-baseline justify-between">
+                    <span className="text-2xl font-black text-emerald-400">
+                      <AnimatedNumber value={avgCombined} />
+                      <span className="text-xs text-slate-500 font-normal">/100</span>
+                    </span>
+                    <span className="text-[10px] text-emerald-400 font-bold bg-emerald-500/10 px-1.5 py-0.5 rounded">
+                      Health
+                    </span>
                   </div>
-                  <p className="text-sm font-bold mt-3 text-slate-300 truncate">
-                    {mostRecentDate}
-                  </p>
-                </Card>
+                </div>
+
+                <div className="p-4 rounded-xl bg-slate-900/40 border border-slate-800/80 flex flex-col justify-between hover:border-slate-700/60 transition-colors">
+                  <div className="flex items-center justify-between text-slate-400">
+                    <span className="text-xs font-medium">Latest Audit Date</span>
+                    <Calendar className="h-4 w-4 text-amber-400" />
+                  </div>
+                  <div className="mt-3 flex items-baseline justify-between">
+                    <span className="text-sm font-bold text-slate-200 truncate">
+                      {mostRecentDate}
+                    </span>
+                    <span className="text-[10px] text-amber-400 font-bold bg-amber-500/10 px-1.5 py-0.5 rounded">
+                      Recent
+                    </span>
+                  </div>
+                </div>
               </div>
 
               {/* CHARTS CONTAINER GRID */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 
                 {/* 1. HEALTH SCORE OVER TIME */}
-                <Card className="bg-[#0b0f19] border-slate-900/80 text-slate-100">
-                  <CardHeader>
-                    <CardTitle className="text-md font-bold text-slate-200">Site Health Index Over Time</CardTitle>
-                    <CardDescription className="text-xs text-slate-550">
+                <Card className="bg-[#0b0f19] border-slate-800/80 text-slate-100 rounded-2xl overflow-hidden">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-base font-bold text-slate-200 flex items-center gap-2">
+                      <Activity className="h-4 w-4 text-emerald-400" /> Site Health Index Over Time
+                    </CardTitle>
+                    <CardDescription className="text-xs text-slate-400">
                       {selectedSiteId === 'all'
-                        ? 'Average combined health score across all websites.'
-                        : 'Combined score history for the selected website.'
+                        ? 'Average combined health score timeline across all monitored properties.'
+                        : 'Historical health index trend for the selected site.'
                       }
                     </CardDescription>
                   </CardHeader>
-                  <div className="p-4 pt-0 h-[300px]">
+                  <div className="p-4 pt-2 h-[280px]">
                     {lineChartData.length === 0 ? (
                       <div className="h-full flex items-center justify-center text-xs text-slate-500">
-                        Insufficient history data.
+                        Insufficient history data for line chart.
                       </div>
                     ) : (
                       <ResponsiveContainer width="100%" height="100%">
                         <LineChart data={lineChartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                          <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
-                          <XAxis dataKey="date" stroke="#64748b" fontSize={10} />
-                          <YAxis domain={[0, 100]} stroke="#64748b" fontSize={10} />
-                          <Tooltip 
-                            contentStyle={{ backgroundColor: '#0f172a', borderColor: '#334155', color: '#f1f5f9' }}
-                            itemStyle={{ color: '#10b981' }}
-                          />
-                          <Line 
-                            type="monotone" 
-                            dataKey="Score" 
-                            stroke="#10b981" 
-                            strokeWidth={3} 
-                            activeDot={{ r: 6 }} 
-                            dot={{ r: 3 }}
+                          <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" opacity={0.6} />
+                          <XAxis dataKey="date" stroke="#64748b" fontSize={11} tickLine={false} />
+                          <YAxis domain={[0, 100]} stroke="#64748b" fontSize={11} tickLine={false} />
+                          <Tooltip content={<CustomChartTooltip />} />
+                          <Line
+                            type="monotone"
+                            dataKey="Score"
+                            name="Combined Score"
+                            stroke="#10b981"
+                            strokeWidth={3}
+                            activeDot={{ r: 6, fill: '#10b981', stroke: '#070a12', strokeWidth: 2 }}
+                            dot={{ r: 3, fill: '#10b981' }}
                             isAnimationActive={true}
                             animationDuration={800}
                           />
@@ -458,31 +509,33 @@ export default function AnalyticsPage() {
                 </Card>
 
                 {/* 2. SEO VS TRUST SCORE COMPARISON */}
-                <Card className="bg-[#0b0f19] border-slate-900/80 text-slate-100">
-                  <CardHeader>
-                    <CardTitle className="text-md font-bold text-slate-200">SEO vs Content Trust Comparison</CardTitle>
-                    <CardDescription className="text-xs text-slate-550">
+                <Card className="bg-[#0b0f19] border-slate-800/80 text-slate-100 rounded-2xl overflow-hidden">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-base font-bold text-slate-200 flex items-center gap-2">
+                      <BarChart3 className="h-4 w-4 text-sky-400" /> Technical SEO vs Content Trust
+                    </CardTitle>
+                    <CardDescription className="text-xs text-slate-400">
                       {selectedSiteId === 'all'
-                        ? 'Latest SEO (mint) and Content Trust (amber) scores per site.'
-                        : 'SEO vs Trust scoring trend over time.'
+                        ? 'Comparative SEO (emerald) and Trust (amber) scores per website.'
+                        : 'SEO vs Content Trust scoring over time.'
                       }
                     </CardDescription>
                   </CardHeader>
-                  <div className="p-4 pt-0 h-[300px]">
+                  <div className="p-4 pt-2 h-[280px]">
                     {barChartData.length === 0 ? (
                       <div className="h-full flex items-center justify-center text-xs text-slate-500">
-                        No scan comparison data.
+                        No comparative bar chart data.
                       </div>
                     ) : (
                       <ResponsiveContainer width="100%" height="100%">
                         <BarChart data={barChartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                          <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
-                          <XAxis dataKey="name" stroke="#64748b" fontSize={10} />
-                          <YAxis domain={[0, 100]} stroke="#64748b" fontSize={10} />
-                          <Tooltip contentStyle={{ backgroundColor: '#0f172a', borderColor: '#334155', color: '#f1f5f9' }} />
-                          <Legend wrapperStyle={{ fontSize: 10, paddingTop: 10 }} />
-                          <Bar dataKey="SEO" fill="#10b981" radius={[4, 4, 0, 0]} isAnimationActive={true} animationDuration={800} />
-                          <Bar dataKey="Trust" fill="#f59e0b" radius={[4, 4, 0, 0]} isAnimationActive={true} animationDuration={800} />
+                          <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" opacity={0.6} />
+                          <XAxis dataKey="name" stroke="#64748b" fontSize={11} tickLine={false} />
+                          <YAxis domain={[0, 100]} stroke="#64748b" fontSize={11} tickLine={false} />
+                          <Tooltip content={<CustomChartTooltip />} />
+                          <Legend wrapperStyle={{ fontSize: 11, paddingTop: 8 }} />
+                          <Bar dataKey="SEO" fill="#10b981" radius={[6, 6, 0, 0]} isAnimationActive={true} animationDuration={800} />
+                          <Bar dataKey="Trust" fill="#f59e0b" radius={[6, 6, 0, 0]} isAnimationActive={true} animationDuration={800} />
                         </BarChart>
                       </ResponsiveContainer>
                     )}
@@ -490,30 +543,32 @@ export default function AnalyticsPage() {
                 </Card>
 
                 {/* 3. FLAGGED ISSUES SEVERITY BREAKDOWN */}
-                <Card className="bg-[#0b0f19] border-slate-900/80 text-slate-100 lg:col-span-2">
-                  <CardHeader>
-                    <CardTitle className="text-md font-bold text-slate-200">Flagged Issues Breakdown</CardTitle>
-                    <CardDescription className="text-xs text-slate-550">
-                      Total count of SEO issues and Trust alerts categorized by risk severity in current scope.
+                <Card className="bg-[#0b0f19] border-slate-800/80 text-slate-100 rounded-2xl overflow-hidden lg:col-span-2">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-base font-bold text-slate-200 flex items-center gap-2">
+                      <PieIcon className="h-4 w-4 text-amber-400" /> Flagged Audit Issues Severity Breakdown
+                    </CardTitle>
+                    <CardDescription className="text-xs text-slate-400">
+                      Total count of SEO structural issues and copy credibility warnings categorized by risk impact.
                     </CardDescription>
                   </CardHeader>
-                  <div className="p-6 pt-0 flex flex-col md:flex-row items-center justify-center gap-8 h-auto min-h-[250px]">
+                  <div className="p-6 pt-0 flex flex-col md:flex-row items-center justify-center gap-8 min-h-[220px]">
                     {pieChartData.length === 0 ? (
-                      <div className="h-[200px] w-full flex items-center justify-center text-xs text-slate-500">
-                        No issues or trust flags recorded. Good job!
+                      <div className="h-[180px] w-full flex items-center justify-center text-xs text-slate-500">
+                        No issues or trust flags recorded across monitored properties. All clear!
                       </div>
                     ) : (
                       <>
-                        <div className="w-full md:w-1/2 h-[220px] shrink-0">
+                        <div className="w-full md:w-1/2 h-[200px] shrink-0">
                           <ResponsiveContainer width="100%" height="100%">
                             <PieChart>
                               <Pie
                                 data={pieChartData}
                                 cx="50%"
                                 cy="50%"
-                                innerRadius={60}
-                                outerRadius={85}
-                                paddingAngle={3}
+                                innerRadius={55}
+                                outerRadius={80}
+                                paddingAngle={4}
                                 dataKey="value"
                                 isAnimationActive={true}
                                 animationDuration={800}
@@ -522,23 +577,26 @@ export default function AnalyticsPage() {
                                   <Cell key={`cell-${index}`} fill={entry.color} />
                                 ))}
                               </Pie>
-                              <Tooltip contentStyle={{ backgroundColor: '#0f172a', borderColor: '#334155', color: '#f1f5f9' }} />
+                              <Tooltip content={<CustomChartTooltip />} />
                             </PieChart>
                           </ResponsiveContainer>
                         </div>
-                        
+
                         <div className="w-full md:w-1/2 space-y-3">
-                          <div className="flex items-center gap-2 text-xs text-slate-400 font-semibold mb-2">
-                            <ShieldAlert className="h-4 w-4 text-slate-500" /> Key Issue Categories
-                          </div>
+                          <p className="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-2">
+                            <ShieldAlert className="h-4 w-4 text-amber-400" /> Issue Distribution
+                          </p>
                           {pieChartData.map((entry, index) => (
-                            <div key={index} className="flex items-center justify-between text-xs p-2.5 rounded bg-slate-950/40 border border-slate-900">
+                            <div
+                              key={index}
+                              className="flex items-center justify-between text-xs p-3 rounded-xl bg-slate-900/60 border border-slate-800/80"
+                            >
                               <div className="flex items-center gap-2.5">
                                 <span className="h-3 w-3 rounded-full shrink-0" style={{ backgroundColor: entry.color }} />
-                                <span className="text-slate-300 font-medium truncate max-w-[200px] md:max-w-xs">{entry.name}</span>
+                                <span className="text-slate-200 font-medium">{entry.name}</span>
                               </div>
-                              <span className="font-extrabold text-slate-100 bg-slate-800 px-2 py-0.5 rounded text-[10px] shrink-0">
-                                {entry.value} issues
+                              <span className="font-extrabold text-slate-100 bg-slate-800 px-2.5 py-1 rounded-md text-xs">
+                                {entry.value} {entry.value === 1 ? 'issue' : 'issues'}
                               </span>
                             </div>
                           ))}
@@ -546,91 +604,109 @@ export default function AnalyticsPage() {
                       </>
                     )}
                   </div>
-                 </Card>
+                </Card>
 
               </div>
 
               {/* SITE COMPARISON TABLE */}
-              <Card className="bg-[#111827]/70 border-slate-800/80 text-slate-100 mt-8">
-                <CardHeader>
-                  <CardTitle className="text-md font-bold text-slate-200">Site Comparison</CardTitle>
-                  <CardDescription className="text-xs text-slate-550">
-                    Sortable performance directory of all registered domains and audit statuses.
+              <Card className="bg-[#0b0f19] border-slate-800/80 text-slate-100 rounded-2xl overflow-hidden mt-8">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-base font-bold text-slate-200">Site Performance Comparison Directory</CardTitle>
+                  <CardDescription className="text-xs text-slate-400">
+                    Sortable table listing all monitored domains and their latest SEO & Trust indexes.
                   </CardDescription>
                 </CardHeader>
-                
+
                 <div className="px-6 pb-6 overflow-x-auto">
                   <table className="w-full text-left border-collapse text-xs">
                     <thead>
-                      <tr className="border-b border-slate-850 text-slate-500 font-semibold uppercase tracking-wider select-none">
-                        <th 
+                      <tr className="border-b border-slate-800/80 text-slate-400 font-semibold uppercase tracking-wider select-none bg-slate-900/40">
+                        <th
                           onClick={() => handleSort('nickname')}
-                          className="py-3 px-4 cursor-pointer hover:text-slate-350 transition-colors"
+                          className="py-3 px-4 cursor-pointer hover:text-slate-200 transition-colors rounded-l-lg"
                         >
-                          <div className="flex items-center gap-1">
-                            Site Name
+                          <div className="flex items-center gap-1.5">
+                            Site Domain / Nickname
                             {sortField === 'nickname' ? (
-                              sortAsc ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />
-                            ) : <ArrowUpDown className="h-3 w-3 opacity-40" />}
+                              sortAsc ? <ChevronUp className="h-3.5 w-3.5 text-emerald-400" /> : <ChevronDown className="h-3.5 w-3.5 text-emerald-400" />
+                            ) : <ArrowUpDown className="h-3.5 w-3.5 opacity-40" />}
                           </div>
                         </th>
-                        <th 
+                        <th
                           onClick={() => handleSort('seo_score')}
-                          className="py-3 px-4 cursor-pointer hover:text-slate-355 transition-colors"
+                          className="py-3 px-4 cursor-pointer hover:text-slate-200 transition-colors"
                         >
-                          <div className="flex items-center gap-1">
+                          <div className="flex items-center gap-1.5">
                             SEO Score
                             {sortField === 'seo_score' ? (
-                              sortAsc ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />
-                            ) : <ArrowUpDown className="h-3 w-3 opacity-40" />}
+                              sortAsc ? <ChevronUp className="h-3.5 w-3.5 text-emerald-400" /> : <ChevronDown className="h-3.5 w-3.5 text-emerald-400" />
+                            ) : <ArrowUpDown className="h-3.5 w-3.5 opacity-40" />}
                           </div>
                         </th>
-                        <th 
+                        <th
                           onClick={() => handleSort('trust_score')}
-                          className="py-3 px-4 cursor-pointer hover:text-slate-355 transition-colors"
+                          className="py-3 px-4 cursor-pointer hover:text-slate-200 transition-colors"
                         >
-                          <div className="flex items-center gap-1">
+                          <div className="flex items-center gap-1.5">
                             Trust Score
                             {sortField === 'trust_score' ? (
-                              sortAsc ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />
-                            ) : <ArrowUpDown className="h-3 w-3 opacity-40" />}
+                              sortAsc ? <ChevronUp className="h-3.5 w-3.5 text-emerald-400" /> : <ChevronDown className="h-3.5 w-3.5 text-emerald-400" />
+                            ) : <ArrowUpDown className="h-3.5 w-3.5 opacity-40" />}
                           </div>
                         </th>
-                        <th 
+                        <th
                           onClick={() => handleSort('combined_score')}
-                          className="py-3 px-4 cursor-pointer hover:text-slate-355 transition-colors"
+                          className="py-3 px-4 cursor-pointer hover:text-slate-200 transition-colors"
                         >
-                          <div className="flex items-center gap-1">
+                          <div className="flex items-center gap-1.5">
                             Combined Score
                             {sortField === 'combined_score' ? (
-                              sortAsc ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />
-                            ) : <ArrowUpDown className="h-3 w-3 opacity-40" />}
+                              sortAsc ? <ChevronUp className="h-3.5 w-3.5 text-emerald-400" /> : <ChevronDown className="h-3.5 w-3.5 text-emerald-400" />
+                            ) : <ArrowUpDown className="h-3.5 w-3.5 opacity-40" />}
                           </div>
                         </th>
-                        <th className="py-3 px-4 text-right">Actions</th>
+                        <th className="py-3 px-4 text-right rounded-r-lg">Action</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-slate-800/40 text-slate-300">
+                    <tbody className="divide-y divide-slate-800/50 text-slate-300">
                       {getComparisonData().map((item) => {
                         return (
-                          <tr key={item.id} className="hover:bg-slate-900/30 transition-colors">
+                          <tr key={item.id} className="hover:bg-slate-900/40 transition-colors">
                             <td className="py-3.5 px-4 font-medium text-slate-200">
                               <div>
-                                <p className="font-semibold text-slate-200">{item.nickname}</p>
-                                <p className="text-[10px] text-slate-500 truncate max-w-xs">{item.url}</p>
+                                <p className="font-bold text-slate-200">{item.nickname}</p>
+                                <p className="text-[11px] text-slate-400 truncate max-w-xs">{item.url}</p>
                               </div>
                             </td>
-                            
+
                             <td className="py-3.5 px-4 font-semibold">
-                              {item.seo_score !== null ? `${item.seo_score}%` : <span className="text-slate-600 italic">No data</span>}
+                              {item.seo_score !== null ? (
+                                <span className="px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-extrabold">
+                                  {item.seo_score}%
+                                </span>
+                              ) : (
+                                <span className="text-slate-400 italic">No data</span>
+                              )}
                             </td>
 
                             <td className="py-3.5 px-4 font-semibold">
-                              {item.trust_score !== null ? `${item.trust_score}%` : <span className="text-slate-600 italic">No data</span>}
+                              {item.trust_score !== null ? (
+                                <span className="px-2 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/20 font-extrabold">
+                                  {item.trust_score}%
+                                </span>
+                              ) : (
+                                <span className="text-slate-400 italic">No data</span>
+                              )}
                             </td>
 
-                            <td className="py-3.5 px-4 font-bold text-emerald-400">
-                              {item.combined_score !== null ? `${item.combined_score}%` : <span className="text-slate-600 italic">No data</span>}
+                            <td className="py-3.5 px-4 font-bold">
+                              {item.combined_score !== null ? (
+                                <span className="text-slate-100 font-black text-sm">
+                                  {item.combined_score}/100
+                                </span>
+                              ) : (
+                                <span className="text-slate-400 italic">No data</span>
+                              )}
                             </td>
 
                             <td className="py-3.5 px-4 text-right">
@@ -638,7 +714,7 @@ export default function AnalyticsPage() {
                                 onClick={() => navigate(`/dashboard/sites/${item.id}`)}
                                 variant="outline"
                                 size="sm"
-                                className="h-7 text-[10px] border-slate-800 hover:bg-slate-800 hover:text-slate-100"
+                                className="h-7 text-xs border-slate-800 hover:bg-slate-800 hover:text-slate-100 font-bold"
                               >
                                 View Details
                               </Button>
