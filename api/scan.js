@@ -549,12 +549,20 @@ Provide business context about the domain.
     res.status(200).json(finalResult);
 
     // 5. Asynchronously trigger Resend Email Notifications (if configured)
-    console.log(`[SiteDoctor+ Debug] Attempting to trigger email notifications...
-      - user_email: "${user_email}"
-      - email_notifications preference: ${email_notifications} (type: ${typeof email_notifications})
-      - resendApiKey present: ${!!resendApiKey} (length: ${resendApiKey?.length || 0})`);
+    console.log(`[SiteDoctor+ Debug] Email sending pipeline triggered after scan completion for URL: ${url}`);
+    console.log(`[SiteDoctor+ Debug] Diagnostic Check 1 (Triggered): YES`);
+    console.log(`[SiteDoctor+ Debug] Diagnostic Check 2 (RESEND_API_KEY): Present=${!!resendApiKey}, Length=${resendApiKey?.length || 0}`);
+    console.log(`[SiteDoctor+ Debug] Diagnostic Check 3 (From Address): SiteDoctor+ <onboarding@resend.dev>`);
+    console.log(`[SiteDoctor+ Debug] Diagnostic Check 5 (User Preference email_notifications): ${email_notifications} (type: ${typeof email_notifications})`);
+    console.log(`[SiteDoctor+ Debug] Diagnostic Check 6 (Recipient Email): user_email="${user_email}"`);
 
-    if (email_notifications && user_email && resendApiKey && resendApiKey !== 'your-resend-key-placeholder') {
+    if (!email_notifications) {
+      console.warn(`[SiteDoctor+ Debug] Email notifications disabled by user preference (email_notifications = ${email_notifications}). Skipping send.`);
+    } else if (!user_email) {
+      console.warn(`[SiteDoctor+ Debug] No recipient user_email provided in scan request. Skipping send.`);
+    } else if (!resendApiKey || resendApiKey === 'your-resend-key-placeholder') {
+      console.error(`[SiteDoctor+ Debug] RESEND_API_KEY is missing or invalid. Skipping send.`);
+    } else {
       try {
         const issuesList = [];
         if (parsedAudit.seo_categories && parsedAudit.seo_categories.length > 0) {
@@ -608,8 +616,8 @@ Provide business context about the domain.
 </div>
 `;
 
-        const recipientEmail = user_email === 'swaraakini27@gmail.com' ? user_email : 'swaraakini27@gmail.com';
-        console.log(`[SiteDoctor+ Debug] Sending "Scan Complete" email via Resend to ${recipientEmail} (scanned user: ${user_email})...`);
+        const recipientEmail = user_email;
+        console.log(`[SiteDoctor+ Debug] Sending "Scan Complete" email via Resend to recipient: ${recipientEmail}...`);
         const email1Res = await fetch('https://api.resend.com/emails', {
           method: 'POST',
           headers: {
@@ -625,12 +633,12 @@ Provide business context about the domain.
         });
 
         const responseText = await email1Res.text();
-        console.log(`[SiteDoctor+ Debug] Resend API "Scan Complete" response status: ${email1Res.status}\nBody:`, responseText);
+        console.log(`[SiteDoctor+ Debug] Diagnostic Check 4 (Full Resend API Response):\nStatus: ${email1Res.status}\nBody: ${responseText}`);
 
         if (!email1Res.ok) {
-          console.error('Failed to send Scan Complete email:', responseText);
+          console.error('[SiteDoctor+ Debug] Failed to send Scan Complete email:', responseText);
         } else {
-          console.log('Scan Complete email sent successfully.');
+          console.log('[SiteDoctor+ Debug] Scan Complete email sent successfully.');
         }
 
         // Score Drop logic
@@ -686,8 +694,8 @@ Provide business context about the domain.
 </div>
 `;
 
-            const recipientEmail2 = user_email === 'swaraakini27@gmail.com' ? user_email : 'swaraakini27@gmail.com';
-            console.log(`[SiteDoctor+ Debug] Sending "Score Drop Alert" email via Resend to ${recipientEmail2} (scanned user: ${user_email})...`);
+            const recipientEmail2 = user_email;
+            console.log(`[SiteDoctor+ Debug] Sending "Score Drop Alert" email via Resend to recipient: ${recipientEmail2}...`);
             const email2Res = await fetch('https://api.resend.com/emails', {
               method: 'POST',
               headers: {
@@ -703,17 +711,17 @@ Provide business context about the domain.
             });
 
             const responseText2 = await email2Res.text();
-            console.log(`[SiteDoctor+ Debug] Resend API "Score Drop Alert" response status: ${email2Res.status}\nBody:`, responseText2);
+            console.log(`[SiteDoctor+ Debug] Diagnostic Check 4 (Full Resend API "Score Drop Alert" Response):\nStatus: ${email2Res.status}\nBody: ${responseText2}`);
 
             if (!email2Res.ok) {
-              console.error('Failed to send Score Drop email:', responseText2);
+              console.error('[SiteDoctor+ Debug] Failed to send Score Drop email:', responseText2);
             } else {
-              console.log('Score Drop email sent successfully.');
+              console.log('[SiteDoctor+ Debug] Score Drop email sent successfully.');
             }
           }
         }
       } catch (mailErr) {
-        console.error('Error sending email notifications:', mailErr);
+        console.error('[SiteDoctor+ Debug] Error sending email notifications:', mailErr);
       }
     }
 
